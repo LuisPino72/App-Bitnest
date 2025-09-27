@@ -1,101 +1,205 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Users, 
-  TrendingUp, 
-  UserPlus, 
-  DollarSign, 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  TrendingUp,
+  UserPlus,
+  DollarSign,
   Calculator,
   BarChart3,
-  Settings
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 
 const navigation = [
   {
-    name: 'Dashboard',
-    href: '/',
+    name: "Dashboard",
+    href: "/",
     icon: LayoutDashboard,
   },
   {
-    name: 'Referidos',
-    href: '/referrals',
+    name: "Referidos",
+    href: "/referrals",
     icon: Users,
   },
   {
-    name: 'Análisis',
-    href: '/analytics',
+    name: "Análisis",
+    href: "/analytics",
     icon: BarChart3,
   },
   {
-    name: 'Contactos',
-    href: '/leads',
+    name: "Contactos",
+    href: "/leads",
     icon: UserPlus,
   },
   {
-    name: 'Inversiones',
-    href: '/investments',
+    name: "Inversiones",
+    href: "/investments",
     icon: DollarSign,
   },
   {
-    name: 'Calculadoras',
-    href: '/calculators',
+    name: "Calculadoras",
+    href: "/calculators",
     icon: Calculator,
   },
   {
-    name: 'Configuración',
-    href: '/settings',
+    name: "Configuración",
+    href: "/settings",
     icon: Settings,
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth < 768) {
+        setIsCollapsed(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setIsMobileOpen(!isMobileOpen);
+    } else {
+      setIsCollapsed(!isCollapsed);
+    }
+  };
+
+  const closeMobileSidebar = () => {
+    if (isMobile) {
+      setIsMobileOpen(false);
+    }
+  };
+
+  const sidebarWidth = isCollapsed ? "w-16" : "w-64";
+  const mobileSidebarClass = isMobileOpen
+    ? "translate-x-0"
+    : "-translate-x-full";
 
   return (
-    <div className="flex h-full w-64 flex-col bg-white border-r border-gray-200">
-      <div className="flex h-16 shrink-0 items-center px-6 border-b border-gray-200">
-        <div className="flex items-center">
-          <TrendingUp className="h-8 w-8 text-primary-600" />
-          <span className="ml-2 text-xl font-bold text-gray-900">MLM Dashboard</span>
+    <>
+      {isMobile && isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
+      <button
+        onClick={toggleSidebar}
+        className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-md bg-primary-600 text-white shadow-lg"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      <div
+        className={cn(
+          "fixed md:relative h-full bg-white border-r border-gray-200 transition-all duration-300 z-40",
+          sidebarWidth,
+          isMobile ? `fixed inset-y-0 left-0 ${mobileSidebarClass}` : ""
+        )}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex h-16 shrink-0 items-center px-4 border-b border-gray-200">
+            <div
+              className={cn(
+                "flex items-center transition-opacity duration-200",
+                isCollapsed ? "justify-center w-full" : "w-full"
+              )}
+            >
+              {!isCollapsed ? (
+                <>
+                  <TrendingUp className="h-8 w-8 text-primary-600" />
+                  <span className="ml-2 text-xl font-bold text-gray-900 whitespace-nowrap">
+                    MLM Dashboard
+                  </span>
+                </>
+              ) : (
+                <TrendingUp className="h-8 w-8 text-primary-600" />
+              )}
+            </div>
+
+            {!isMobile && (
+              <button
+                onClick={toggleSidebar}
+                className="p-1 rounded-md hover:bg-gray-100 transition-colors ml-auto"
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-4 w-4 text-gray-600" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4 text-gray-600" />
+                )}
+              </button>
+            )}
+          </div>
+
+          <nav className="flex flex-1 flex-col overflow-y-auto p-4">
+            <ul className="space-y-2">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      onClick={closeMobileSidebar}
+                      className={cn(
+                        "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-primary-100 text-primary-700 shadow-sm"
+                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+                        isCollapsed ? "justify-center" : ""
+                      )}
+                      title={isCollapsed ? item.name : ""}
+                    >
+                      <item.icon
+                        className={cn(
+                          "shrink-0 transition-colors",
+                          isActive
+                            ? "text-primary-500"
+                            : "text-gray-400 group-hover:text-gray-500",
+                          isCollapsed ? "h-5 w-5" : "h-5 w-5 mr-3"
+                        )}
+                      />
+                      {!isCollapsed && (
+                        <span className="whitespace-nowrap">{item.name}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <div className="p-4 border-t border-gray-200">
+            <div
+              className={cn(
+                "text-xs text-gray-500 transition-opacity duration-200",
+                isCollapsed ? "text-center" : "text-center"
+              )}
+            >
+              {!isCollapsed ? <>© 2024 MLM Dashboard</> : <>© 2025</>}
+            </div>
+          </div>
         </div>
       </div>
-      <nav className="flex flex-1 flex-col overflow-y-auto p-4">
-        <ul className="space-y-2">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-primary-100 text-primary-700 shadow-sm'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      'mr-3 h-5 w-5 shrink-0 transition-colors',
-                      isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
-                    )}
-                  />
-                  {item.name}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500 text-center">
-          © 2024 MLM Dashboard
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
