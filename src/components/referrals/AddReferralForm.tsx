@@ -1,0 +1,307 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useReferrals } from "@/hooks";
+import {
+  calculateReferralEarnings,
+  calculateUserIncome,
+  calculateExpirationDate,
+  BUSINESS_CONSTANTS,
+} from "@/lib/businessUtils";
+import { UserPlus, Calculator } from "lucide-react";
+
+export function AddReferralForm() {
+  const { addReferral } = useReferrals();
+  const [formData, setFormData] = useState({
+    name: "",
+    wallet: "",
+    email: "",
+    amount: "",
+    cycle: "1",
+    generation: "1",
+    investmentDate: "",
+    expirationDate: "",
+  });
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    setFormData((prev) => ({
+      ...prev,
+      investmentDate: today,
+      expirationDate: calculateExpirationDate(today),
+    }));
+  }, []);
+
+  const [calculations, setCalculations] = useState({
+    referralEarnings: 0,
+    myIncome: 0,
+    totalEarned: 0,
+  });
+
+  const handleAmountChange = (amount: string) => {
+    const numAmount = parseFloat(amount) || 0;
+    const referralEarnings = calculateReferralEarnings(numAmount);
+    const myIncome = calculateUserIncome(
+      referralEarnings,
+      parseInt(formData.generation) as 1 | 2
+    );
+
+    setCalculations({
+      referralEarnings,
+      myIncome,
+      totalEarned: referralEarnings + myIncome,
+    });
+    setFormData((prev) => ({ ...prev, amount }));
+  };
+
+  const handleInvestmentDateChange = (date: string) => {
+    const expirationDate = calculateExpirationDate(date);
+    setFormData((prev) => ({
+      ...prev,
+      investmentDate: date,
+      expirationDate,
+    }));
+  };
+
+  const handleGenerationChange = (generation: string) => {
+    setFormData((prev) => ({ ...prev, generation }));
+
+    if (formData.amount) {
+      const numAmount = parseFloat(formData.amount) || 0;
+      const referralEarnings = calculateReferralEarnings(numAmount);
+      const myIncome = calculateUserIncome(
+        referralEarnings,
+        parseInt(generation) as 1 | 2
+      );
+
+      setCalculations({
+        referralEarnings,
+        myIncome,
+        totalEarned: referralEarnings + myIncome,
+      });
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name || !formData.wallet || !formData.amount) {
+      alert("Por favor completa todos los campos obligatorios");
+      return;
+    }
+
+    const referralData = {
+      name: formData.name,
+      wallet: formData.wallet,
+      email: formData.email || "",
+      amount: parseFloat(formData.amount),
+      cycle: parseInt(formData.cycle),
+      generation: parseInt(formData.generation) as 1 | 2,
+      status: "active" as const,
+      investmentDate: formData.investmentDate,
+      expirationDate: formData.expirationDate,
+      startDate: new Date().toISOString().split("T")[0],
+      cycleCount: 1,
+      earnings: calculations.referralEarnings,
+      userIncome: calculations.myIncome,
+      totalEarned: calculations.totalEarned,
+    };
+
+    addReferral(referralData);
+
+    const today = new Date().toISOString().split("T")[0];
+    setFormData({
+      name: "",
+      wallet: "",
+      email: "",
+      amount: "",
+      cycle: "1",
+      generation: "1",
+      investmentDate: today,
+      expirationDate: calculateExpirationDate(today),
+    });
+    setCalculations({ referralEarnings: 0, myIncome: 0, totalEarned: 0 });
+
+    alert("Referido agregado exitosamente!");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5" />
+          Información del Referido
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Información básica */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre Completo *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Nombre del referido"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="email@ejemplo.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dirección de Billetera *
+              </label>
+              <input
+                type="text"
+                value={formData.wallet}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, wallet: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0x..."
+                required
+              />
+            </div>
+          </div>
+
+          {/* Información de inversión */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto de Inversión *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.amount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder="0.00"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ciclo
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.cycle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, cycle: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Generación
+              </label>
+              <select
+                value={formData.generation}
+                onChange={(e) => handleGenerationChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="1">Primera Generación</option>
+                <option value="2">Segunda Generación</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha de Inversión
+              </label>
+              <input
+                type="date"
+                value={formData.investmentDate}
+                onChange={(e) => handleInvestmentDateChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fecha de Vencimiento (Automática)
+            </label>
+            <input
+              type="date"
+              value={formData.expirationDate}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Se calcula automáticamente: fecha de inversión +{" "}
+              {BUSINESS_CONSTANTS.CYCLE_DAYS} días
+            </p>
+          </div>
+
+          {/* Mostrar cálculos */}
+          {parseFloat(formData.amount) > 0 && (
+            <div className="p-4 bg-gray-50 rounded-md">
+              <h4 className="font-medium mb-2 flex items-center gap-2">
+                <Calculator className="h-4 w-4" />
+                Proyección de Ganancias
+              </h4>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-600">Ganancias del Referido:</p>
+                  <p className="font-medium">
+                    ${calculations.referralEarnings.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Mi Ingreso:</p>
+                  <p className="font-medium">
+                    ${calculations.myIncome.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Total:</p>
+                  <p className="font-medium">
+                    ${calculations.totalEarned.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                * Cálculos basados en{" "}
+                {formData.generation === "1" ? "primera" : "segunda"} generación
+              </p>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full">
+            Agregar Referido
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
