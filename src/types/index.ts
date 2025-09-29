@@ -2,8 +2,11 @@ export interface Referral {
   id: string;
   name: string;
   phone?: string;
+  wallet: string;
   generation: 1 | 2;
   amount: number;
+  cycle: number;
+  investmentDate: string;
   startDate: string;
   expirationDate: string;
   status: "active" | "completed" | "expired";

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Plus, Search, Edit, Trash2, Users, X } from "lucide-react";
 import { useReferrals, useSearch, usePagination } from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
+import { Toast } from "@/components/ui/Toast";
 
 export default function ReferralsPage() {
   const { referrals, addReferral, updateReferral, deleteReferral } =
@@ -18,15 +19,35 @@ export default function ReferralsPage() {
   >("all");
   const [showForm, setShowForm] = useState(false);
   const [editingReferral, setEditingReferral] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type?: "success" | "error";
+  } | null>(null);
+  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const filteredReferrals = referrals.filter((referral) => {
-    const generationMatch =
-      filterGeneration === "all" ||
-      referral.generation.toString() === filterGeneration;
-    const statusMatch =
-      filterStatus === "all" || referral.status === filterStatus;
-    return generationMatch && statusMatch;
-  });
+  const showToast = useCallback(
+    (message: string, type: "success" | "error" = "success") => {
+      setToast({ message, type });
+      if (toastTimeout.current) clearTimeout(toastTimeout.current);
+      toastTimeout.current = setTimeout(() => setToast(null), 2500);
+    },
+    []
+  );
+
+  const filteredReferrals = referrals
+    .filter((referral) => {
+      const generationMatch =
+        filterGeneration === "all" ||
+        referral.generation.toString() === filterGeneration;
+      const statusMatch =
+        filterStatus === "all" || referral.status === filterStatus;
+      return generationMatch && statusMatch;
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.expirationDate).getTime() -
+        new Date(b.expirationDate).getTime()
+    );
 
   const { searchTerm, setSearchTerm, filteredItems } =
     useSearch(filteredReferrals);
@@ -42,7 +63,18 @@ export default function ReferralsPage() {
   const handleDelete = (id: string) => {
     if (confirm("¿Estás seguro de que quieres eliminar este referido?")) {
       deleteReferral(id);
+      showToast("Referido eliminado exitosamente", "success");
     }
+  };
+
+  const handleAddReferralSuccess = (msg?: string) => {
+    setShowForm(false);
+    showToast(msg || "Referido agregado exitosamente!", "success");
+  };
+
+  const handleUpdateReferralSuccess = (msg?: string) => {
+    setEditingReferral(null);
+    showToast(msg || "Referido actualizado exitosamente", "success");
   };
 
   const getStatusBadge = (status: string) => {
@@ -74,10 +106,6 @@ export default function ReferralsPage() {
     }
   };
 
-  const handleAddReferralSuccess = () => {
-    setShowForm(false);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -96,6 +124,7 @@ export default function ReferralsPage() {
         </button>
       </div>
 
+      {/* Modal para Agregar Referido */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -111,23 +140,19 @@ export default function ReferralsPage() {
               </button>
             </div>
             <div className="p-6">
-              <AddReferralForm />
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  Cancelar
-                </button>
-              </div>
+              <AddReferralForm
+                onSuccess={handleAddReferralSuccess}
+                onCancel={() => setShowForm(false)}
+              />
             </div>
           </div>
         </div>
       )}
 
+      {/* Modal para Editar Referido */}
       {editingReferral && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">
                 Editar Referido
@@ -140,25 +165,11 @@ export default function ReferralsPage() {
               </button>
             </div>
             <div className="p-6">
-              <p className="text-gray-500">
-                Formulario de edición en desarrollo...
-              </p>
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setEditingReferral(null)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingReferral(null);
-                  }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                >
-                  Guardar Cambios
-                </button>
-              </div>
+              <AddReferralForm
+                referral={referrals.find((r) => r.id === editingReferral) || null}
+                onSuccess={handleUpdateReferralSuccess}
+                onCancel={() => setEditingReferral(null)}
+              />
             </div>
           </div>
         </div>
@@ -335,7 +346,7 @@ export default function ReferralsPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(referral.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     {formatDate(referral.expirationDate)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -398,6 +409,14 @@ export default function ReferralsPage() {
               : "Comienza agregando tu primer referido"}
           </p>
         </div>
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

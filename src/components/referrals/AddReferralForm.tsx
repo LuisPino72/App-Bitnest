@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReferrals } from "@/hooks";
+import type { Referral } from "@/types";
 import {
   calculateReferralEarnings,
   calculateUserIncome,
@@ -12,26 +13,31 @@ import {
 } from "@/lib/businessUtils";
 import { UserPlus, Calculator } from "lucide-react";
 
-export function AddReferralForm() {
-  const { addReferral } = useReferrals();
-  const [formData, setFormData] = useState({
-    name: "",
-    wallet: "",
-    amount: "",
-    cycle: "1",
-    generation: "1",
-    investmentDate: "",
-    expirationDate: "",
-  });
+interface AddReferralFormProps {
+  onSuccess?: (msg?: string) => void;
+  onCancel?: () => void;
+  referral?: Referral | null;
+  onUpdate?: (id: string, data: Partial<Referral>) => void;
+}
 
-  useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    setFormData((prev) => ({
-      ...prev,
-      investmentDate: today,
-      expirationDate: calculateExpirationDate(today),
-    }));
-  }, []);
+export function AddReferralForm({
+  onSuccess,
+  onCancel,
+  referral,
+  onUpdate,
+}: AddReferralFormProps) {
+  const { addReferral, updateReferral } = useReferrals();
+  const isEdit = !!referral;
+
+  const [formData, setFormData] = useState({
+    name: referral?.name || "",
+    wallet: referral?.wallet || "",
+    amount: referral ? referral.amount.toString() : "",
+    cycle: referral ? referral.cycle?.toString() || "1" : "1",
+    generation: referral ? referral.generation.toString() : "1",
+    investmentDate: referral?.investmentDate || "",
+    expirationDate: referral?.expirationDate || "",
+  });
 
   const [calculations, setCalculations] = useState({
     referralEarnings: 0,
@@ -39,14 +45,49 @@ export function AddReferralForm() {
     totalEarned: 0,
   });
 
+  useEffect(() => {
+    if (referral) {
+      setFormData({
+        name: referral.name,
+        wallet: referral.wallet,
+        amount: referral.amount.toString(),
+        cycle: referral.cycle?.toString() || "1",
+        generation: referral.generation.toString(),
+        investmentDate: referral.investmentDate,
+        expirationDate: referral.expirationDate,
+      });
+      const numAmount = referral.amount;
+      const referralEarnings = calculateReferralEarnings(numAmount);
+      const myIncome = calculateUserIncome(
+        referralEarnings,
+        referral.generation
+      );
+      setCalculations({
+        referralEarnings,
+        myIncome,
+        totalEarned: referralEarnings + myIncome,
+      });
+    }
+  }, [referral]);
+  useEffect(() => {
+    if (!isEdit) {
+      const today = new Date().toISOString().split("T")[0];
+      setFormData((prev) => ({
+        ...prev,
+        investmentDate: today,
+        expirationDate: calculateExpirationDate(today),
+      }));
+    }
+  }, [isEdit]);
+
   const handleAmountChange = (amount: string) => {
+    // Permite decimales correctamente - usa parseFloat directamente
     const numAmount = parseFloat(amount) || 0;
     const referralEarnings = calculateReferralEarnings(numAmount);
     const myIncome = calculateUserIncome(
       referralEarnings,
       parseInt(formData.generation) as 1 | 2
     );
-
     setCalculations({
       referralEarnings,
       myIncome,
@@ -86,14 +127,37 @@ export function AddReferralForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.wallet || !formData.amount) {
-      alert("Por favor completa todos los campos obligatorios");
+    if (!formData.name.trim() || !formData.wallet.trim() || !formData.amount) {
+      onSuccess?.("Por favor completa todos los campos obligatorios");
       return;
     }
 
+    const numAmount = parseFloat(formData.amount);
+    if (numAmount <= 0) {
+      onSuccess?.("El monto de inversión debe ser mayor a 0");
+      return;
+    }
+
+    if (isEdit && referral) {
+      const updates = {
+        name: formData.name.trim(),
+        wallet: formData.wallet.trim(),
+        amount: numAmount,
+        cycle: parseInt(formData.cycle),
+        generation: parseInt(formData.generation) as 1 | 2,
+        investmentDate: formData.investmentDate,
+        expirationDate: formData.expirationDate,
+        earnings: calculations.referralEarnings,
+        userIncome: calculations.myIncome,
+      };
+      updateReferral(referral.id, updates);
+      onUpdate?.(referral.id, updates);
+      onSuccess?.("Referido actualizado exitosamente");
+      return;
+    }
     const referralData = {
-      name: formData.name,
-      wallet: formData.wallet,
+      name: formData.name.trim(),
+      wallet: formData.wallet.trim(),
       amount: parseFloat(formData.amount),
       cycle: parseInt(formData.cycle),
       generation: parseInt(formData.generation) as 1 | 2,
@@ -108,20 +172,20 @@ export function AddReferralForm() {
     };
 
     addReferral(referralData);
-
-    const today = new Date().toISOString().split("T")[0];
-    setFormData({
-      name: "",
-      wallet: "",
-      amount: "",
-      cycle: "1",
-      generation: "1",
-      investmentDate: today,
-      expirationDate: calculateExpirationDate(today),
-    });
-    setCalculations({ referralEarnings: 0, myIncome: 0, totalEarned: 0 });
-
-    alert("Referido agregado exitosamente!");
+    onSuccess?.("Referido agregado exitosamente!");
+    if (!isEdit) {
+      const today = new Date().toISOString().split("T")[0];
+      setFormData({
+        name: "",
+        wallet: "",
+        amount: "",
+        cycle: "1",
+        generation: "1",
+        investmentDate: today,
+        expirationDate: calculateExpirationDate(today),
+      });
+      setCalculations({ referralEarnings: 0, myIncome: 0, totalEarned: 0 });
+    }
   };
 
   return (
@@ -129,7 +193,7 @@ export function AddReferralForm() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserPlus className="h-5 w-5" />
-          Información del Referido
+          {isEdit ? "Editar Referido" : "Agregar Nuevo Referido"}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -275,9 +339,21 @@ export function AddReferralForm() {
             </div>
           )}
 
-          <Button type="submit" className="w-full">
-            Agregar Referido
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" className="w-full">
+              {isEdit ? "Guardar Cambios" : "Agregar Referido"}
+            </Button>
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={onCancel}
+              >
+                Cancelar
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

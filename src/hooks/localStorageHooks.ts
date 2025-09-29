@@ -52,7 +52,6 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
   return [storedValue, setValue] as const;
 };
 
-// Datos iniciales vacíos en lugar de mockData
 const initialReferrals: Referral[] = [];
 const initialInvestments: PersonalInvestment[] = [];
 const initialLeads: Lead[] = [];
