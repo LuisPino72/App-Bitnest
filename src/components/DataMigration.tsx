@@ -1,33 +1,47 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Upload, Download, AlertCircle, CheckCircle, Database } from 'lucide-react';
-import { useDataProvider } from '@/hooks';
-import { ReferralService, PersonalInvestmentService, LeadService } from '@/lib/firebaseService';
-import { mockReferrals, mockPersonalInvestments, mockLeads } from '@/data/mockData';
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Upload,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  Database,
+} from "lucide-react";
+import { useDataProvider } from "@/hooks";
+import {
+  ReferralService,
+  PersonalInvestmentService,
+  LeadService,
+} from "@/lib/firebaseService";
+// import { mockReferrals, mockPersonalInvestments, mockLeads } from '@/data/mockData';
 
 export default function DataMigration() {
   const { provider, isFirebaseConfigured, switchProvider } = useDataProvider();
   const [migrating, setMigrating] = useState(false);
-  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [migrationMessage, setMigrationMessage] = useState('');
+  const [migrationStatus, setMigrationStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [migrationMessage, setMigrationMessage] = useState("");
 
   const migrateLocalStorageToFirebase = async () => {
     if (!isFirebaseConfigured) {
-      setMigrationStatus('error');
-      setMigrationMessage('Firebase no está configurado. Por favor, configura las variables de entorno primero.');
+      setMigrationStatus("error");
+      setMigrationMessage(
+        "Firebase no está configurado. Por favor, configura las variables de entorno primero."
+      );
       return;
     }
 
     setMigrating(true);
-    setMigrationStatus('idle');
+    setMigrationStatus("idle");
 
     try {
-      const referralsData = localStorage.getItem('mlm-referrals');
-      const investmentsData = localStorage.getItem('mlm-personal-investments');
-      const leadsData = localStorage.getItem('mlm-leads');
+      const referralsData = localStorage.getItem("mlm-referrals");
+      const investmentsData = localStorage.getItem("mlm-personal-investments");
+      const leadsData = localStorage.getItem("mlm-leads");
 
       let migratedCount = 0;
 
@@ -58,69 +72,38 @@ export default function DataMigration() {
         }
       }
 
-      setMigrationStatus('success');
-      setMigrationMessage(`Migración exitosa: ${migratedCount} registros migrados a Firebase.`);
-      
-      switchProvider('firebase');
+      setMigrationStatus("success");
+      setMigrationMessage(
+        `Migración exitosa: ${migratedCount} registros migrados a Firebase.`
+      );
 
+      switchProvider("firebase");
     } catch (error) {
-      setMigrationStatus('error');
-      setMigrationMessage(`Error durante la migración: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      setMigrationStatus("error");
+      setMigrationMessage(
+        `Error durante la migración: ${
+          error instanceof Error ? error.message : "Error desconocido"
+        }`
+      );
     } finally {
       setMigrating(false);
     }
   };
 
+  // Función de carga de mockData deshabilitada porque el archivo fue eliminado
   const loadMockData = async () => {
-    if (!isFirebaseConfigured) {
-      setMigrationStatus('error');
-      setMigrationMessage('Firebase no está configurado. Por favor, configura las variables de entorno primero.');
-      return;
-    }
-
-    setMigrating(true);
-    setMigrationStatus('idle');
-
-    try {
-      let loadedCount = 0;
-
-      for (const referral of mockReferrals) {
-        const { id, ...referralData } = referral;
-        await ReferralService.create(referralData);
-        loadedCount++;
-      }
-
-      for (const investment of mockPersonalInvestments) {
-        const { id, ...investmentData } = investment;
-        await PersonalInvestmentService.create(investmentData);
-        loadedCount++;
-      }
-
-      for (const lead of mockLeads) {
-        const { id, ...leadData } = lead;
-        await LeadService.create(leadData);
-        loadedCount++;
-      }
-
-      setMigrationStatus('success');
-      setMigrationMessage(`Datos de ejemplo cargados: ${loadedCount} registros creados en Firebase.`);
-      
-      switchProvider('firebase');
-
-    } catch (error) {
-      setMigrationStatus('error');
-      setMigrationMessage(`Error cargando datos de ejemplo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    } finally {
-      setMigrating(false);
-    }
+    setMigrationStatus("error");
+    setMigrationMessage(
+      "El archivo de datos de ejemplo (mockData) no está disponible."
+    );
   };
 
   const clearLocalStorage = () => {
-    localStorage.removeItem('mlm-referrals');
-    localStorage.removeItem('mlm-personal-investments');
-    localStorage.removeItem('mlm-leads');
-    setMigrationStatus('success');
-    setMigrationMessage('Datos del localStorage eliminados correctamente.');
+    localStorage.removeItem("mlm-referrals");
+    localStorage.removeItem("mlm-personal-investments");
+    localStorage.removeItem("mlm-leads");
+    setMigrationStatus("success");
+    setMigrationMessage("Datos del localStorage eliminados correctamente.");
   };
 
   if (!isFirebaseConfigured) {
@@ -153,14 +136,16 @@ export default function DataMigration() {
         <div className="space-y-3">
           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
             <div>
-              <h4 className="font-semibold text-blue-800">Migrar desde localStorage</h4>
+              <h4 className="font-semibold text-blue-800">
+                Migrar desde localStorage
+              </h4>
               <p className="text-sm text-blue-600">
                 Transfiere tus datos actuales a Firebase
               </p>
             </div>
-            <Button 
+            <Button
               onClick={migrateLocalStorageToFirebase}
-              disabled={migrating || provider === 'firebase'}
+              disabled={migrating || provider === "firebase"}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Upload className="h-4 w-4 mr-2" />
@@ -170,12 +155,14 @@ export default function DataMigration() {
 
           <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
             <div>
-              <h4 className="font-semibold text-green-800">Cargar datos de ejemplo</h4>
+              <h4 className="font-semibold text-green-800">
+                Cargar datos de ejemplo
+              </h4>
               <p className="text-sm text-green-600">
                 Carga datos de demostración en Firebase
               </p>
             </div>
-            <Button 
+            <Button
               onClick={loadMockData}
               disabled={migrating}
               className="bg-green-600 hover:bg-green-700"
@@ -187,12 +174,14 @@ export default function DataMigration() {
 
           <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
             <div>
-              <h4 className="font-semibold text-orange-800">Limpiar localStorage</h4>
+              <h4 className="font-semibold text-orange-800">
+                Limpiar localStorage
+              </h4>
               <p className="text-sm text-orange-600">
                 Elimina datos del almacenamiento local
               </p>
             </div>
-            <Button 
+            <Button
               onClick={clearLocalStorage}
               disabled={migrating}
               variant="outline"
@@ -210,14 +199,14 @@ export default function DataMigration() {
           </div>
         )}
 
-        {migrationStatus === 'success' && (
+        {migrationStatus === "success" && (
           <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
             <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
             <span className="text-green-800">{migrationMessage}</span>
           </div>
         )}
 
-        {migrationStatus === 'error' && (
+        {migrationStatus === "error" && (
           <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
             <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
             <span className="text-red-800">{migrationMessage}</span>
@@ -225,8 +214,14 @@ export default function DataMigration() {
         )}
 
         <div className="text-sm text-gray-600">
-          <p><strong>Proveedor actual:</strong> {provider === 'firebase' ? 'Firebase' : 'localStorage'}</p>
-          <p><strong>Estado de Firebase:</strong> {isFirebaseConfigured ? 'Configurado' : 'No configurado'}</p>
+          <p>
+            <strong>Proveedor actual:</strong>{" "}
+            {provider === "firebase" ? "Firebase" : "localStorage"}
+          </p>
+          <p>
+            <strong>Estado de Firebase:</strong>{" "}
+            {isFirebaseConfigured ? "Configurado" : "No configurado"}
+          </p>
         </div>
       </CardContent>
     </Card>

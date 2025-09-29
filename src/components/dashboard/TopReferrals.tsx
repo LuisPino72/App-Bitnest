@@ -59,7 +59,7 @@ export function TopReferrals() {
                         {referral.name}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Gen {referral.generation} • {referral.email}
+                        Gen {referral.generation}
                       </p>
                     </div>
                   </div>

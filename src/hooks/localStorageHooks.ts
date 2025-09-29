@@ -3,11 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Referral, PersonalInvestment, Lead, DashboardMetrics } from "@/types";
 import {
-  mockReferrals,
-  mockPersonalInvestments,
-  mockLeads,
-} from "@/data/mockData";
-import {
   calculateDashboardMetrics,
   getTopReferrals,
   getExpiringToday,
@@ -57,10 +52,15 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
   return [storedValue, setValue] as const;
 };
 
+// Datos iniciales vacíos en lugar de mockData
+const initialReferrals: Referral[] = [];
+const initialInvestments: PersonalInvestment[] = [];
+const initialLeads: Lead[] = [];
+
 export const useReferrals = () => {
   const [referrals, setReferrals] = useLocalStorage<Referral[]>(
     STORAGE_KEYS.REFERRALS,
-    mockReferrals
+    initialReferrals
   );
 
   const addReferral = (
@@ -139,7 +139,7 @@ export const useReferrals = () => {
 export const usePersonalInvestments = () => {
   const [investments, setInvestments] = useLocalStorage<PersonalInvestment[]>(
     STORAGE_KEYS.PERSONAL_INVESTMENTS,
-    mockPersonalInvestments
+    initialInvestments
   );
 
   const addInvestment = (
@@ -199,7 +199,7 @@ export const usePersonalInvestments = () => {
 export const useLeads = () => {
   const [leads, setLeads] = useLocalStorage<Lead[]>(
     STORAGE_KEYS.LEADS,
-    mockLeads
+    initialLeads
   );
 
   const addLead = (leadData: Omit<Lead, "id">) => {
