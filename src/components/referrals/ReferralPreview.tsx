@@ -33,7 +33,6 @@ export function ReferralPreview() {
 
   return (
     <div className="space-y-6">
-      {/* Calculadora rápida */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -95,8 +94,6 @@ export function ReferralPreview() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Información del protocolo */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -182,8 +179,6 @@ export function ReferralPreview() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Tips y recordatorios */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">💡 Tips y Recordatorios</CardTitle>

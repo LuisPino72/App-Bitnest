@@ -50,7 +50,7 @@ const navigation = [
     icon: Calculator,
   },
   {
-    name: "Configuración",
+    name: "Exportar",
     href: "/settings",
     icon: Settings,
   },
