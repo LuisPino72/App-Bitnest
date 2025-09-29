@@ -7,7 +7,6 @@ import FirebaseStatus from '@/components/FirebaseStatus';
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Configuración</h1>
         <p className="text-gray-600 mt-2">
@@ -15,7 +14,6 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Firebase Configuration */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
           <Database className="h-5 w-5 mr-2" />
@@ -24,7 +22,6 @@ export default function SettingsPage() {
         <FirebaseStatus />
       </div>
 
-      {/* Application Settings */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
           <Settings className="h-5 w-5 mr-2" />
@@ -76,7 +73,6 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      {/* Security */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
           <Shield className="h-5 w-5 mr-2" />

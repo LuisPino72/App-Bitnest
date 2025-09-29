@@ -1,11 +1,17 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'MLM Dashboard - Gestión de Referidos',
-  description: 'Sistema profesional de gestión de referidos multinivel con análisis y proyecciones',
-  keywords: ['MLM', 'referidos', 'inversiones', 'dashboard', 'análisis'],
-  authors: [{ name: 'MLM Dashboard' }],
+  title: "Bitnest - Gestión de Referidos",
+  description:
+    "Sistema profesional de gestión de referidos multinivel con análisis y proyecciones",
+  keywords: ["Bitnest", "referidos", "inversiones", "dashboard", "análisis"],
+  authors: [{ name: "Bitnest" }],
+  icons: {
+    icon: "/Logo.ico",
+    shortcut: "/Logo.ico",
+    apple: "/Logo.ico",
+  },
 };
 
 export default function RootLayout({
@@ -17,15 +23,17 @@ export default function RootLayout({
     <html lang="es" className="h-full">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="h-full">
-        {children}
-      </body>
+      <body className="h-full bg-gray-50">{children}</body>
     </html>
   );
 }

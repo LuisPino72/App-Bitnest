@@ -1,19 +1,24 @@
-'use client';
+"use client";
 
-import Sidebar from '@/components/layout/Sidebar';
+import { useState } from "react";
+import Sidebar from "@/components/layout/Sidebar";
+import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto p-6">
+      <Sidebar onCollapseChange={setSidebarCollapsed} />
+      <div className="flex-1 min-w-0 overflow-auto transition-all duration-300">
+        <div className="p-3 md:p-4 max-w-full">
+          {" "}
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );

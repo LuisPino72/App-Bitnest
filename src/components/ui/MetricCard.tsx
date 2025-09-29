@@ -1,10 +1,11 @@
+// components/ui/MetricCard.tsx
 interface MetricCardProps {
   title: string;
   value: string;
   change?: string;
   changeType?: 'positive' | 'negative' | 'neutral';
-  icon?: React.ReactNode;
-  className?: string;
+  icon: React.ReactNode;
+  compact?: boolean;
 }
 
 export default function MetricCard({ 
@@ -12,34 +13,34 @@ export default function MetricCard({
   value, 
   change, 
   changeType = 'neutral', 
-  icon, 
-  className = '' 
+  icon,
+  compact = false 
 }: MetricCardProps) {
-  const changeColors = {
-    positive: 'text-success-600',
-    negative: 'text-danger-600',
-    neutral: 'text-gray-600'
-  };
-
   return (
-    <div className={`card p-6 ${className}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+    <div className={`card ${compact ? 'p-4' : 'p-6'}`}>
+      <div className={`flex items-center ${compact ? 'mb-2' : 'mb-4'}`}>
+        <div className={`rounded-lg p-2 ${
+          changeType === 'positive' ? 'bg-success-100 text-success-600' :
+          changeType === 'negative' ? 'bg-danger-100 text-danger-600' :
+          'bg-gray-100 text-gray-600'
+        }`}>
+          {icon}
+        </div>
+        <div className="ml-3 flex-1">
+          <p className={`text-gray-600 ${compact ? 'text-sm' : 'text-base'}`}>{title}</p>
+          <p className={`font-bold text-gray-900 ${compact ? 'text-xl' : 'text-2xl'}`}>
+            {value}
+          </p>
           {change && (
-            <p className={`text-sm mt-2 ${changeColors[changeType]}`}>
+            <p className={`${
+              changeType === 'positive' ? 'text-success-600' :
+              changeType === 'negative' ? 'text-danger-600' :
+              'text-gray-600'
+            } ${compact ? 'text-xs' : 'text-sm'}`}>
               {change}
             </p>
           )}
         </div>
-        {icon && (
-          <div className="p-3 bg-primary-100 rounded-full">
-            <div className="text-primary-600">
-              {icon}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

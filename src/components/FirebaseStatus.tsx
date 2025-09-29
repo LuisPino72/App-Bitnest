@@ -179,7 +179,6 @@ export default function FirebaseStatus() {
 
   return (
     <div className="space-y-4">
-      {/* Status Card */}
       <Card className={isConnected ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
         <CardHeader>
           <CardTitle className={`flex items-center ${isConnected ? 'text-green-800' : 'text-yellow-800'}`}>
@@ -207,7 +206,6 @@ export default function FirebaseStatus() {
         </CardContent>
       </Card>
 
-      {/* Migration Options */}
       {isConnected && (
         <Card>
           <CardHeader>

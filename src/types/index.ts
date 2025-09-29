@@ -1,16 +1,15 @@
 export interface Referral {
   id: string;
   name: string;
-  email: string;
   phone?: string;
   generation: 1 | 2;
   amount: number;
   startDate: string;
   expirationDate: string;
-  status: 'active' | 'completed' | 'expired';
-  referredBy?: string; 
-  earnings: number; 
-  userIncome: number; 
+  status: "active" | "completed" | "expired";
+  referredBy?: string;
+  earnings: number;
+  userIncome: number;
   cycleCount: number;
   totalEarned: number;
 }
@@ -20,8 +19,8 @@ export interface PersonalInvestment {
   amount: number;
   startDate: string;
   expirationDate: string;
-  status: 'active' | 'completed' | 'expired';
-  earnings: number; 
+  status: "active" | "completed" | "expired";
+  earnings: number;
   cycleCount: number;
   totalEarned: number;
 }
@@ -29,13 +28,11 @@ export interface PersonalInvestment {
 export interface Lead {
   id: string;
   name: string;
-  email?: string;
   phone?: string;
-  status: 'interested' | 'doubtful' | 'rejected';
+  status: "interested" | "doubtful" | "rejected";
   notes?: string;
   contactDate: string;
   lastContact?: string;
-  source?: string;
 }
 
 export interface DashboardMetrics {
@@ -85,15 +82,14 @@ export interface ReferralCalculatorResult {
   }[];
 }
 
-
 export const BUSINESS_CONSTANTS = {
-  REFERRAL_EARNINGS_RATE: 0.24, 
-  USER_COMMISSION_RATE: 0.20, 
-  CYCLE_DAYS: 28, 
-  FIRST_GEN_COMMISSION: 0.20, 
-  SECOND_GEN_COMMISSION: 0.10, 
+  REFERRAL_EARNINGS_RATE: 0.24,
+  USER_COMMISSION_RATE: 0.2,
+  CYCLE_DAYS: 28,
+  FIRST_GEN_COMMISSION: 0.2,
+  SECOND_GEN_COMMISSION: 0.1,
 } as const;
 
-export type LeadStatus = 'interested' | 'doubtful' | 'rejected';
-export type ReferralStatus = 'active' | 'completed' | 'expired';
+export type LeadStatus = "interested" | "doubtful" | "rejected";
+export type ReferralStatus = "active" | "completed" | "expired";
 export type Generation = 1 | 2;

@@ -60,8 +60,6 @@ NEXT_PUBLIC_FIREBASE_APP_ID=tu_app_id
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir lectura y escritura para todos los documentos
-    // En producción, deberías implementar autenticación
     match /{document=**} {
       allow read, write: if true;
     }
@@ -108,7 +106,6 @@ service cloud.firestore {
 La aplicación usa hooks "inteligentes" que automáticamente eligen el mejor proveedor de datos:
 
 ```typescript
-// Estos hooks automáticamente usan Firebase si está configurado
 import { 
   useSmartReferrals, 
   useSmartPersonalInvestments, 

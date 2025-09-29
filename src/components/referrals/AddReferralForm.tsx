@@ -17,7 +17,6 @@ export function AddReferralForm() {
   const [formData, setFormData] = useState({
     name: "",
     wallet: "",
-    email: "",
     amount: "",
     cycle: "1",
     generation: "1",
@@ -95,7 +94,6 @@ export function AddReferralForm() {
     const referralData = {
       name: formData.name,
       wallet: formData.wallet,
-      email: formData.email || "",
       amount: parseFloat(formData.amount),
       cycle: parseInt(formData.cycle),
       generation: parseInt(formData.generation) as 1 | 2,
@@ -115,7 +113,6 @@ export function AddReferralForm() {
     setFormData({
       name: "",
       wallet: "",
-      email: "",
       amount: "",
       cycle: "1",
       generation: "1",
@@ -137,7 +134,6 @@ export function AddReferralForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Información básica */}
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -154,22 +150,6 @@ export function AddReferralForm() {
                 required
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="email@ejemplo.com"
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Dirección de Billetera *
@@ -187,7 +167,6 @@ export function AddReferralForm() {
             </div>
           </div>
 
-          {/* Información de inversión */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -263,7 +242,6 @@ export function AddReferralForm() {
             </p>
           </div>
 
-          {/* Mostrar cálculos */}
           {parseFloat(formData.amount) > 0 && (
             <div className="p-4 bg-gray-50 rounded-md">
               <h4 className="font-medium mb-2 flex items-center gap-2">
