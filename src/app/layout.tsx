@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   keywords: ["Bitnest", "referidos", "inversiones", "dashboard", "análisis"],
   authors: [{ name: "Bitnest" }],
   icons: {
-    icon: "/Logo.ico",
-    shortcut: "/Logo.ico",
-    apple: "/Logo.ico",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
 };
 
