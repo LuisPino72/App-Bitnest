@@ -10,7 +10,6 @@ import {
   BUSINESS_CONSTANTS,
 } from "@/types";
 
-
 export const formatDate = (date: string): string => {
   return new Date(date).toLocaleDateString("es-ES");
 };
@@ -34,7 +33,6 @@ export const daysBetween = (date1: string, date2: string): number => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
-
 export const calculateReferralEarnings = (amount: number): number => {
   return amount * BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
 };
@@ -49,7 +47,6 @@ export const calculateUserIncome = (
   if (generation === 1) {
     return baseCommission;
   } else {
-    
     return baseCommission * 0.5;
   }
 };
@@ -68,7 +65,6 @@ export const calculateDashboardMetrics = (
   leads: Lead[],
   currentDate?: string
 ): DashboardMetrics => {
-  
   const today = currentDate || "2024-09-15";
 
   const activeReferrals = referrals.filter((r) => r.status === "active");
@@ -77,11 +73,9 @@ export const calculateDashboardMetrics = (
   );
   const interestedLeads = leads.filter((l) => l.status === "interested");
 
-  
   const firstGenReferrals = activeReferrals.filter((r) => r.generation === 1);
   const secondGenReferrals = activeReferrals.filter((r) => r.generation === 2);
 
-  
   const totalPersonalInvestments = activeInvestments.reduce(
     (sum, inv) => sum + inv.amount,
     0
@@ -92,7 +86,6 @@ export const calculateDashboardMetrics = (
   );
   const totalInvestments = totalPersonalInvestments + totalReferralInvestments;
 
- 
   const personalEarnings = activeInvestments.reduce(
     (sum, inv) => sum + inv.earnings,
     0
@@ -103,12 +96,10 @@ export const calculateDashboardMetrics = (
   );
   const totalEarnings = personalEarnings + referralIncome;
 
-
   const expiringToday = [...activeReferrals, ...activeInvestments].filter(
     (item) => item.expirationDate === today
   ).length;
 
- 
   const thirtyDaysAgo = addDays(today, -30);
   const recentReferrals = activeReferrals.filter(
     (r) => r.startDate >= thirtyDaysAgo
@@ -132,7 +123,6 @@ export const calculateDashboardMetrics = (
   };
 };
 
-
 export const getTopReferrals = (
   referrals: Referral[],
   limit: number = 3
@@ -142,7 +132,6 @@ export const getTopReferrals = (
     .sort((a, b) => b.userIncome - a.userIncome)
     .slice(0, limit);
 };
-
 
 export const getExpiringToday = (
   referrals: Referral[],
@@ -159,7 +148,6 @@ export const getExpiringToday = (
     ),
   };
 };
-
 
 export const calculatePersonalIncomeProjection = (
   input: CalculatorInput
@@ -188,7 +176,6 @@ export const calculatePersonalIncomeProjection = (
     breakdown,
   };
 };
-
 
 export const calculateReferralIncomeProjection = (
   input: ReferralCalculatorInput
@@ -219,7 +206,6 @@ export const calculateReferralIncomeProjection = (
   };
 };
 
-
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
@@ -229,11 +215,9 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-
 export const formatPercentage = (value: number): string => {
   return `${(value * 100).toFixed(1)}%`;
 };
-
 
 export const generateId = (prefix: string = ""): string => {
   const timestamp = Date.now().toString(36);
@@ -241,18 +225,10 @@ export const generateId = (prefix: string = ""): string => {
   return `${prefix}${prefix ? "-" : ""}${timestamp}-${random}`;
 };
 
-
-export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-
 export const isValidPhone = (phone: string): boolean => {
   const phoneRegex = /^[+]?[1-9]?[0-9]{7,15}$/;
   return phoneRegex.test(phone.replace(/[\s-()]/g, ""));
 };
-
 
 export const calculateGrowthRate = (
   current: number,
@@ -261,7 +237,6 @@ export const calculateGrowthRate = (
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 };
-
 
 export const getLeadStats = (leads: Lead[]) => {
   const total = leads.length;
@@ -294,7 +269,7 @@ export const filterReferralsByStatus = (
   return referrals.filter((r) => r.status === status);
 };
 
-export const searchItems = <T extends { name: string; email?: string }>(
+export const searchItems = <T extends { name: string; phone?: string }>(
   items: T[],
   searchTerm: string
 ): T[] => {
@@ -304,6 +279,6 @@ export const searchItems = <T extends { name: string; email?: string }>(
   return items.filter(
     (item) =>
       item.name.toLowerCase().includes(term) ||
-      (item.email && item.email.toLowerCase().includes(term))
+      (item.phone && item.phone.toLowerCase().includes(term))
   );
 };

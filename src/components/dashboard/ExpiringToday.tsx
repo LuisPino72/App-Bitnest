@@ -31,7 +31,6 @@ export function ExpiringToday() {
               {totalExpiring} item{totalExpiring !== 1 ? 's' : ''} vence{totalExpiring === 1 ? '' : 'n'} hoy:
             </p>
             
-            {/* Referidos que vencen hoy */}
             {expiringToday.referrals.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Referidos:</p>
@@ -48,16 +47,11 @@ export function ExpiringToday() {
                       <p className="text-sm text-warning-600 font-medium">
                         Vence hoy
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {referral.email?.substring(0, 10)}...
-                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Inversiones personales que vencen hoy */}
             {expiringToday.investments.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">Inversiones Personales:</p>

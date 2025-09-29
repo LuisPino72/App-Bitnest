@@ -13,7 +13,7 @@ Una aplicación web profesional para la gestión de referidos multinivel, desarr
 ### Gestión de Referidos
 - **CRUD completo** para referidos de primera y segunda generación
 - **Cálculos automáticos**: 24% ganancias del referido, 20% comisión del usuario
-- **Filtros y búsqueda** avanzada por generación, estado, nombre y email
+- **Filtros y búsqueda** avanzada por generación, estado, nombre 
 - **Tabla paginada** con información detallada de cada referido
 
 ### Análisis y Visualizaciones
@@ -228,7 +228,7 @@ src/
 ## 📈 Funcionalidades Avanzadas
 
 ### Filtros y Búsqueda
-- **Búsqueda en tiempo real** por nombre y email
+- **Búsqueda en tiempo real** por nombre
 - **Filtros combinables** por generación y estado
 - **Paginación inteligente** con navegación
 
@@ -252,7 +252,6 @@ src/
 - [ ] Panel de administración
 - [ ] API REST para móvil
 - [ ] Integración con WhatsApp Business
-- [ ] Reportes automáticos por email
 
 ## 🤝 Contribución
 
