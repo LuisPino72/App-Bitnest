@@ -10,10 +10,8 @@ import {
   BUSINESS_CONSTANTS,
 } from "@/types";
 
-// Mostrar la fecha en formato DD/MM/YYYY sin desfase de zona horaria
 export const formatDate = (date: string): string => {
   if (!date) return "";
-  // date: YYYY-MM-DD
   const [year, month, day] = date.split("-");
   return `${day}/${month}/${year}`;
 };
@@ -63,6 +61,16 @@ export const calculateExpirationDate = (startDate: string): string => {
   return addDays(startDate, BUSINESS_CONSTANTS.CYCLE_DAYS);
 };
 
+export const getUniqueReferrals = (referrals: Referral[]): Referral[] => {
+  const seen = new Set<string>();
+  return referrals.filter((ref) => {
+    const key = ref.wallet || ref.name;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 export const calculateDashboardMetrics = (
   referrals: Referral[],
   personalInvestments: PersonalInvestment[],
@@ -71,7 +79,9 @@ export const calculateDashboardMetrics = (
 ): DashboardMetrics => {
   const today = currentDate || new Date().toISOString().split("T")[0];
 
-  const activeReferrals = referrals.filter((r) => r.status === "active");
+  const uniqueReferrals = getUniqueReferrals(referrals);
+
+  const activeReferrals = uniqueReferrals.filter((r) => r.status === "active");
   const activeInvestments = personalInvestments.filter(
     (inv) => inv.status === "active"
   );
