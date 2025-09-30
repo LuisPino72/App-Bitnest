@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Plus, Search, Edit, Trash2, Users, X } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Users,
+  X,
+  RefreshCw,
+  CheckCircle,
+} from "lucide-react";
 import { useReferrals, useSearch, usePagination } from "@/hooks";
 import { formatCurrency, formatDate } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
@@ -19,6 +28,10 @@ export default function ReferralsPage() {
   >("all");
   const [showForm, setShowForm] = useState(false);
   const [editingReferral, setEditingReferral] = useState<string | null>(null);
+  const [cycleModalReferral, setCycleModalReferral] = useState<null | string>(
+    null
+  );
+  const [cycleActionLoading, setCycleActionLoading] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type?: "success" | "error";
@@ -33,6 +46,54 @@ export default function ReferralsPage() {
     },
     []
   );
+
+  const handleFinishCycle = async (referralId: string) => {
+    setCycleActionLoading(true);
+    const referral = referrals.find((r) => r.id === referralId);
+    if (!referral) return;
+    await updateReferral(referralId, { status: "completed" });
+    setCycleActionLoading(false);
+    setCycleModalReferral(null);
+    showToast("Ciclo finalizado. El referido ha sido marcado como inactivo.");
+  };
+
+  const handleReinvestCycle = async (referralId: string) => {
+    setCycleActionLoading(true);
+    const referral = referrals.find((r) => r.id === referralId);
+    if (!referral) return;
+    const newCycle = referral.cycle + 1;
+    const newAmount = parseFloat(
+      (referral.amount + referral.earnings).toFixed(2)
+    );
+    const newEarnings = parseFloat((newAmount * 0.24).toFixed(2));
+    const newUserIncome = parseFloat(
+      (newEarnings * (referral.generation === 1 ? 0.2 : 0.1)).toFixed(2)
+    );
+    const today = new Date().toISOString().split("T")[0];
+    const expirationDate = (() => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + 28);
+      return d.toISOString().split("T")[0];
+    })();
+    const totalEarned = parseFloat(
+      (referral.totalEarned + newEarnings + newUserIncome).toFixed(2)
+    );
+    await updateReferral(referralId, {
+      amount: newAmount,
+      cycle: newCycle,
+      investmentDate: today,
+      expirationDate,
+      earnings: newEarnings,
+      userIncome: newUserIncome,
+      totalEarned,
+      status: "active",
+      startDate: today,
+      cycleCount: newCycle,
+    });
+    setCycleActionLoading(false);
+    setCycleModalReferral(null);
+    showToast("Reinversión exitosa. El ciclo ha sido actualizado.");
+  };
 
   const filteredReferrals = referrals
     .filter((referral) => {
@@ -166,10 +227,61 @@ export default function ReferralsPage() {
             </div>
             <div className="p-6">
               <AddReferralForm
-                referral={referrals.find((r) => r.id === editingReferral) || null}
+                referral={
+                  referrals.find((r) => r.id === editingReferral) || null
+                }
                 onSuccess={handleUpdateReferralSuccess}
                 onCancel={() => setEditingReferral(null)}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Finalizar Ciclo / Reinvertir */}
+      {cycleModalReferral && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-green-600" />
+                Finalizar Ciclo
+              </h2>
+              <button
+                onClick={() => setCycleModalReferral(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700 text-base mb-2">
+                ¿Qué deseas hacer con este referido?
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => handleFinishCycle(cycleModalReferral)}
+                  disabled={cycleActionLoading}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Finalizar (marcar como inactivo)
+                </button>
+                <button
+                  onClick={() => handleReinvestCycle(cycleModalReferral)}
+                  disabled={cycleActionLoading}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reinvertir (crear nuevo ciclo)
+                </button>
+              </div>
+              <button
+                onClick={() => setCycleModalReferral(null)}
+                className="mt-4 w-full text-gray-600 hover:text-gray-900 text-sm underline"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
@@ -357,6 +469,13 @@ export default function ReferralsPage() {
                         title="Editar"
                       >
                         <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setCycleModalReferral(referral.id)}
+                        className="text-green-600 hover:text-green-900 transition-colors"
+                        title="Finalizar Ciclo / Reinvertir"
+                      >
+                        <RefreshCw className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(referral.id)}

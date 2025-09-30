@@ -98,7 +98,9 @@ export const useReferrals = () => {
               updated.earnings,
               updated.generation
             );
-            updated.totalEarned = updated.earnings;
+            if (!updated.totalEarned) {
+              updated.totalEarned = updated.earnings;
+            }
           }
 
           return updated;
@@ -168,7 +170,9 @@ export const usePersonalInvestments = () => {
 
           if (updates.amount !== undefined) {
             updated.earnings = calculatePersonalEarnings(updated.amount);
-            updated.totalEarned = updated.earnings;
+            if (!updated.totalEarned) {
+              updated.totalEarned = updated.earnings;
+            }
           }
 
           return updated;
@@ -241,7 +245,7 @@ export const useDashboardMetrics = () => {
   const { investments } = usePersonalInvestments();
   const { leads } = useLeads();
   const [isClient, setIsClient] = useState(false);
-
+  
   useEffect(() => {
     setIsClient(true);
   }, []);

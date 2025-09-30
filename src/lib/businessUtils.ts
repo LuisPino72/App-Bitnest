@@ -65,7 +65,7 @@ export const calculateDashboardMetrics = (
   leads: Lead[],
   currentDate?: string
 ): DashboardMetrics => {
-  const today = currentDate || "2024-09-15";
+  const today = currentDate || new Date().toISOString().split("T")[0];
 
   const activeReferrals = referrals.filter((r) => r.status === "active");
   const activeInvestments = personalInvestments.filter(
@@ -86,30 +86,39 @@ export const calculateDashboardMetrics = (
   );
   const totalInvestments = totalPersonalInvestments + totalReferralInvestments;
 
-  const personalEarnings = activeInvestments.reduce(
-    (sum, inv) => sum + inv.earnings,
+  const referralIncome = referrals.reduce(
+    (sum, ref) => sum + (ref.userIncome || 0),
     0
   );
-  const referralIncome = activeReferrals.reduce(
-    (sum, ref) => sum + ref.userIncome,
+  const personalEarnings = personalInvestments.reduce(
+    (sum, inv) => sum + (inv.earnings || 0),
     0
   );
-  const totalEarnings = personalEarnings + referralIncome;
+  const totalEarnings = referralIncome + personalEarnings;
 
   const expiringToday = [...activeReferrals, ...activeInvestments].filter(
     (item) => item.expirationDate === today
   ).length;
 
   const thirtyDaysAgo = addDays(today, -30);
-  const recentReferrals = activeReferrals.filter(
-    (r) => r.startDate >= thirtyDaysAgo
-  );
-  const recentInvestments = activeInvestments.filter(
-    (inv) => inv.startDate >= thirtyDaysAgo
-  );
+
   const monthlyEarnings =
-    recentReferrals.reduce((sum, ref) => sum + ref.userIncome, 0) +
-    recentInvestments.reduce((sum, inv) => sum + inv.earnings, 0);
+    referrals.reduce((sum, ref) => {
+      const refDate = new Date(ref.startDate || ref.investmentDate);
+      const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
+      if (refDate >= thirtyDaysAgoDate) {
+        return sum + (ref.userIncome || 0);
+      }
+      return sum;
+    }, 0) +
+    personalInvestments.reduce((sum, inv) => {
+      const invDate = new Date(inv.startDate);
+      const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
+      if (invDate >= thirtyDaysAgoDate) {
+        return sum + (inv.earnings || 0);
+      }
+      return sum;
+    }, 0);
 
   return {
     totalInvestments,
@@ -129,10 +138,13 @@ export const getTopReferrals = (
 ): Referral[] => {
   return referrals
     .filter((r) => r.status === "active")
-    .sort((a, b) => b.userIncome - a.userIncome)
+    .sort((a, b) => {
+      const aEarnings = a.totalEarned || a.userIncome || 0;
+      const bEarnings = b.totalEarned || b.userIncome || 0;
+      return bEarnings - aEarnings;
+    })
     .slice(0, limit);
 };
-
 export const getExpiringToday = (
   referrals: Referral[],
   personalInvestments: PersonalInvestment[]
@@ -176,6 +188,23 @@ export const calculatePersonalIncomeProjection = (
     breakdown,
   };
 };
+export function calculateGenerationMetrics(referrals: Referral[]) {
+  const firstGen = referrals.filter((r) => r.generation === 1);
+  const secondGen = referrals.filter((r) => r.generation === 2);
+
+  return {
+    firstGeneration: {
+      count: firstGen.length,
+      totalInvestment: firstGen.reduce((sum, r) => sum + r.amount, 0),
+      totalEarned: firstGen.reduce((sum, r) => sum + (r.totalEarned || 0), 0),
+    },
+    secondGeneration: {
+      count: secondGen.length,
+      totalInvestment: secondGen.reduce((sum, r) => sum + r.amount, 0),
+      totalEarned: secondGen.reduce((sum, r) => sum + (r.totalEarned || 0), 0),
+    },
+  };
+}
 
 export const calculateReferralIncomeProjection = (
   input: ReferralCalculatorInput
@@ -209,7 +238,7 @@ export const calculateReferralIncomeProjection = (
 export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
-    currency: "EUR",
+    currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
