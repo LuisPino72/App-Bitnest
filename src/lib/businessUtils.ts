@@ -10,8 +10,12 @@ import {
   BUSINESS_CONSTANTS,
 } from "@/types";
 
+// Mostrar la fecha en formato DD/MM/YYYY sin desfase de zona horaria
 export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString("es-ES");
+  if (!date) return "";
+  // date: YYYY-MM-DD
+  const [year, month, day] = date.split("-");
+  return `${day}/${month}/${year}`;
 };
 export { BUSINESS_CONSTANTS };
 
