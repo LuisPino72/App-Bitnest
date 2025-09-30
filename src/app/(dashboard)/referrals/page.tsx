@@ -265,7 +265,7 @@ export default function ReferralsPage() {
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
                 >
                   <CheckCircle className="h-4 w-4" />
-                  Finalizar (marcar como inactivo)
+                  Finalizar ciclo
                 </button>
                 <button
                   onClick={() => handleReinvestCycle(cycleModalReferral)}
