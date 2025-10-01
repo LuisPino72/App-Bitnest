@@ -39,6 +39,7 @@ export default function DashboardPage() {
               title="Inversiones Totales"
               value="Cargando..."
               icon={<DollarSign className="h-5 w-5" />}
+              centered
             />
           }
         >
@@ -47,6 +48,7 @@ export default function DashboardPage() {
             value={formatCurrency(metrics.totalInvestments)}
             icon={<DollarSign className="h-5 w-5" />}
             changeType="positive"
+            centered
           />
         </ClientOnly>
         <ClientOnly
@@ -55,6 +57,7 @@ export default function DashboardPage() {
               title="Referidos Activos"
               value="Cargando..."
               icon={<Users className="h-5 w-5" />}
+              centered
             />
           }
         >
@@ -63,6 +66,7 @@ export default function DashboardPage() {
             value={metrics.totalReferrals.toString()}
             change={`${metrics.firstGeneration} Gen1, ${metrics.secondGeneration} Gen2`}
             icon={<Users className="h-5 w-5" />}
+            centered
           />
         </ClientOnly>
         <ClientOnly
@@ -71,6 +75,7 @@ export default function DashboardPage() {
               title="Ganancias Totales"
               value="Cargando..."
               icon={<TrendingUp className="h-5 w-5" />}
+              centered
             />
           }
         >
@@ -79,6 +84,7 @@ export default function DashboardPage() {
             value={formatCurrency(metrics.totalEarnings)}
             icon={<TrendingUp className="h-5 w-5" />}
             changeType="positive"
+            centered
           />
         </ClientOnly>
         <ClientOnly
@@ -87,6 +93,7 @@ export default function DashboardPage() {
               title="Ganancias por Referidos"
               value="Cargando..."
               icon={<TrendingUp className="h-5 w-5" />}
+              centered
             />
           }
         >
@@ -95,6 +102,7 @@ export default function DashboardPage() {
             value={formatCurrency(referralOnlyEarnings)}
             icon={<TrendingUp className="h-5 w-5" />}
             changeType="positive"
+            centered
           />
         </ClientOnly>
       </div>
