@@ -17,9 +17,7 @@ import { useReferrals, useSearch, usePagination } from "@/hooks";
 import {
   formatCurrency,
   formatDate,
-  getUniqueReferrals,
-  getTotalInvestments,
-  getTotalEarnings,
+  getActiveReferralPersons,
 } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
 import { Toast } from "@/components/ui/Toast";
@@ -183,9 +181,16 @@ export default function ReferralsPage() {
     }
   };
 
-  const uniqueReferrals = getUniqueReferrals(referrals);
-  const totalInvestment = getTotalInvestments(referrals);
-  const totalEarnings = getTotalEarnings(referrals);
+  const activeReferralPersons = getActiveReferralPersons(referrals);
+
+  const firstGenActive = activeReferralPersons.filter(
+    (r) => r.generation === 1
+  ).length;
+  const secondGenActive = activeReferralPersons.filter(
+    (r) => r.generation === 2
+  ).length;
+
+  const totalUniqueReferrals = new Set(referrals.map((r) => r.wallet)).size;
 
   return (
     <div className="space-y-6">
@@ -307,13 +312,14 @@ export default function ReferralsPage() {
         </div>
       )}
 
+      {/* ✅ TARJETAS CORREGIDAS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center">
             <Users className="h-8 w-8 text-blue-500" />
             <div className="ml-3">
               <p className="text-sm text-gray-600">Total Referidos</p>
-              <p className="text-2xl font-bold">{uniqueReferrals.length}</p>
+              <p className="text-2xl font-bold">{totalUniqueReferrals}</p>
             </div>
           </div>
         </div>
@@ -322,9 +328,7 @@ export default function ReferralsPage() {
             <Users className="h-8 w-8 text-green-500" />
             <div className="ml-3">
               <p className="text-sm text-gray-600">Primera Gen.</p>
-              <p className="text-2xl font-bold">
-                {uniqueReferrals.filter((r) => r.generation === 1).length}
-              </p>
+              <p className="text-2xl font-bold">{firstGenActive}</p>
             </div>
           </div>
         </div>
@@ -333,9 +337,7 @@ export default function ReferralsPage() {
             <Users className="h-8 w-8 text-yellow-500" />
             <div className="ml-3">
               <p className="text-sm text-gray-600">Segunda Gen.</p>
-              <p className="text-2xl font-bold">
-                {uniqueReferrals.filter((r) => r.generation === 2).length}
-              </p>
+              <p className="text-2xl font-bold">{secondGenActive}</p>
             </div>
           </div>
         </div>
@@ -345,7 +347,7 @@ export default function ReferralsPage() {
             <div className="ml-3">
               <p className="text-sm text-gray-600">Activos</p>
               <p className="text-2xl font-bold">
-                {uniqueReferrals.filter((r) => r.status === "active").length}
+                {activeReferralPersons.length}
               </p>
             </div>
           </div>
