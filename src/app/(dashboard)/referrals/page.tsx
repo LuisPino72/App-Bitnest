@@ -10,12 +10,15 @@ import {
   X,
   RefreshCw,
   CheckCircle,
+  DollarSign, TrendingUp
 } from "lucide-react";
 import { useReferrals, useSearch, usePagination } from "@/hooks";
 import {
   formatCurrency,
   formatDate,
   getUniqueReferrals,
+  getTotalInvestments,
+  getTotalEarnings
 } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
 import { Toast } from "@/components/ui/Toast";
@@ -180,6 +183,8 @@ export default function ReferralsPage() {
   };
 
   const uniqueReferrals = getUniqueReferrals(referrals);
+  const totalInvestment = getTotalInvestments(referrals);
+const totalEarnings = getTotalEarnings(referrals);
 
   return (
     <div className="space-y-6">
