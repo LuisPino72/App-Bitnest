@@ -245,7 +245,7 @@ export const useDashboardMetrics = () => {
   const { investments } = usePersonalInvestments();
   const { leads } = useLeads();
   const [isClient, setIsClient] = useState(false);
-  
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -277,7 +277,7 @@ export const useDashboardMetrics = () => {
   };
 };
 
-export const useSearch = <T extends { name: string; wallet: string; }>(
+export const useSearch = <T extends { name: string; wallet: string }>(
   items: T[]
 ) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -292,6 +292,27 @@ export const useSearch = <T extends { name: string; wallet: string; }>(
         (item.wallet && item.wallet.toLowerCase().includes(term))
     );
   }, [items, searchTerm]);
+
+  return {
+    searchTerm,
+    setSearchTerm,
+    filteredItems,
+  };
+};
+
+export const useLeadSearch = (leads: Lead[]) => {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredItems = useMemo(() => {
+    if (!searchTerm.trim()) return leads;
+
+    const term = searchTerm.toLowerCase();
+    return leads.filter(
+      (lead) =>
+        lead.name.toLowerCase().includes(term) ||
+        (lead.phone && lead.phone.toLowerCase().includes(term))
+    );
+  }, [leads, searchTerm]);
 
   return {
     searchTerm,

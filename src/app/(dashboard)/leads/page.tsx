@@ -13,7 +13,7 @@ import {
   Clock,
   Trash2,
 } from "lucide-react";
-import { useLeads, useSearch, usePagination } from "@/hooks";
+import { useLeads, useSearch, usePagination, useLeadSearch } from "@/hooks";
 import { formatDate } from "@/lib/businessUtils";
 
 export default function LeadsPage() {
@@ -25,7 +25,7 @@ export default function LeadsPage() {
   const [showForm, setShowForm] = useState(false);
 
   const tabLeads = getLeadsByStatus(activeTab);
-  const { searchTerm, setSearchTerm, filteredItems } = useSearch(tabLeads);
+  const { searchTerm, setSearchTerm, filteredItems } = useLeadSearch(tabLeads);
   const { currentPage, totalPages, currentItems, nextPage, previousPage } =
     usePagination(filteredItems, 8);
 
