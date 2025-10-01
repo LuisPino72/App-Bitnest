@@ -277,7 +277,7 @@ export const useDashboardMetrics = () => {
   };
 };
 
-export const useSearch = <T extends { name: string; phone?: string }>(
+export const useSearch = <T extends { name: string; wallet: string; }>(
   items: T[]
 ) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -289,7 +289,7 @@ export const useSearch = <T extends { name: string; phone?: string }>(
     return items.filter(
       (item) =>
         item.name.toLowerCase().includes(term) ||
-        (item.phone && item.phone.toLowerCase().includes(term))
+        (item.wallet && item.wallet.toLowerCase().includes(term))
     );
   }, [items, searchTerm]);
 
