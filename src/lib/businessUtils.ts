@@ -63,13 +63,13 @@ export const calculateExpirationDate = (startDate: string): string => {
 
 export const getUniqueReferrals = (referrals: Referral[]) => {
   const unique = new Map();
-  
-  referrals.forEach(referral => {
+
+  referrals.forEach((referral) => {
     if (!unique.has(referral.wallet)) {
       unique.set(referral.wallet, referral);
     }
   });
-  
+
   return Array.from(unique.values());
 };
 
@@ -93,66 +93,94 @@ export const calculateDashboardMetrics = (
 ): DashboardMetrics => {
   const today = currentDate || new Date().toISOString().split("T")[0];
 
-    const uniqueReferrals = getUniqueReferrals(referrals);
-    const activeUniqueReferrals = uniqueReferrals.filter(r => r.status === "active");
-    const firstGenReferrals = activeUniqueReferrals.filter(r => r.generation === 1);
-    const secondGenReferrals = activeUniqueReferrals.filter(r => r.generation === 2);
-  
-    const activeReferralOrders = referrals.filter(r => r.status === "active");
-    const activePersonalInvestments = personalInvestments.filter(inv => inv.status === "active");
-  
-    const interestedLeads = leads.filter(l => l.status === "interested");
-  
-    const totalPersonalInvestments = activePersonalInvestments.reduce(
-      (sum, inv) => sum + inv.amount,
-      0
-    );
-    const totalReferralInvestments = activeReferralOrders.reduce(
-      (sum, ref) => sum + ref.amount,
-      0
-    );
-    const totalInvestments = totalPersonalInvestments + totalReferralInvestments;
-  
-    const referralIncome = activeReferralOrders.reduce(
-      (sum, ref) => sum + (ref.userIncome || 0),
-      0
-    );
-    const personalEarnings = activePersonalInvestments.reduce(
-      (sum, inv) => sum + (inv.earnings || 0),
-      0
-    );
-    const totalEarnings = referralIncome + personalEarnings;
-  
-    const expiringToday = [
-      ...activeReferralOrders,
-      ...activePersonalInvestments
-    ].filter(item => item.expirationDate === today).length;
-  
-    const thirtyDaysAgo = addDays(today, -30);
-    const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
-  
-    const monthlyEarnings =
-      activeReferralOrders.reduce((sum, ref) => {
-        const refDate = new Date(ref.startDate || ref.investmentDate);
-        return refDate >= thirtyDaysAgoDate ? sum + (ref.userIncome || 0) : sum;
-      }, 0) +
-      activePersonalInvestments.reduce((sum, inv) => {
-        const invDate = new Date(inv.startDate);
-        return invDate >= thirtyDaysAgoDate ? sum + (inv.earnings || 0) : sum;
-      }, 0);
-  
-    return {
-      totalInvestments,
-      totalReferrals: activeUniqueReferrals.length,
-      firstGeneration: firstGenReferrals.length,   
-      secondGeneration: secondGenReferrals.length, 
-      totalEarnings,
-      monthlyEarnings,
-      expiringToday,
-      activeLeads: interestedLeads.length,
-    };
-  };
+  const activeReferralPersons = getActiveReferralPersons(referrals);
+  const activeReferrals = getActiveReferralPersons(referrals);
+  const firstGenReferrals = activeReferrals.filter((r) => r.generation === 1);
+  const secondGenReferrals = activeReferrals.filter((r) => r.generation === 2);
 
+  const activeReferralOrders = referrals.filter((r) => r.status === "active");
+  const activePersonalInvestments = personalInvestments.filter(
+    (inv) => inv.status === "active"
+  );
+
+  const interestedLeads = leads.filter((l) => l.status === "interested");
+
+  const totalPersonalInvestments = activePersonalInvestments.reduce(
+    (sum, inv) => sum + inv.amount,
+    0
+  );
+  const totalReferralInvestments = activeReferralOrders.reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
+
+  const totalInvestments = totalPersonalInvestments + totalReferralInvestments;
+
+  const referralIncome = activeReferralOrders.reduce(
+    (sum, r) => sum + (r.userIncome || 0),
+    0
+  );
+  const personalEarnings = activePersonalInvestments.reduce(
+    (sum, inv) => sum + (inv.earnings || 0),
+    0
+  );
+  const totalEarnings = referralIncome + personalEarnings;
+
+  const expiringToday = [
+    ...activeReferralOrders,
+    ...activePersonalInvestments,
+  ].filter((item) => item.expirationDate === today).length;
+
+  const thirtyDaysAgo = addDays(today, -30);
+  const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
+
+  const monthlyEarnings =
+    activeReferralOrders.reduce((sum, ref) => {
+      const refDate = new Date(ref.startDate || ref.investmentDate);
+      return refDate >= thirtyDaysAgoDate ? sum + (ref.userIncome || 0) : sum;
+    }, 0) +
+    activePersonalInvestments.reduce((sum, inv) => {
+      const invDate = new Date(inv.startDate);
+      return invDate >= thirtyDaysAgoDate ? sum + (inv.earnings || 0) : sum;
+    }, 0);
+
+  return {
+    totalInvestments,
+    totalReferrals: activeReferrals.length,
+    firstGeneration: firstGenReferrals.length,
+    secondGeneration: secondGenReferrals.length,
+    totalEarnings,
+    monthlyEarnings,
+    expiringToday,
+    activeLeads: interestedLeads.length,
+  };
+};
+
+export const getActiveReferralPersons = (referrals: Referral[]): Referral[] => {
+  const walletGroups: Record<string, Referral[]> = {};
+
+  referrals.forEach((ref) => {
+    if (!walletGroups[ref.wallet]) {
+      walletGroups[ref.wallet] = [];
+    }
+    walletGroups[ref.wallet].push(ref);
+  });
+
+  const activePersons: Referral[] = [];
+
+  Object.keys(walletGroups).forEach((wallet) => {
+    const investments = walletGroups[wallet];
+    const hasActiveInvestment = investments.some(
+      (inv: Referral) => inv.status === "active"
+    );
+
+    if (hasActiveInvestment) {
+      activePersons.push(investments[0]);
+    }
+  });
+
+  return activePersons;
+};
 export const getTopReferrals = (
   referrals: Referral[],
   limit: number = 3
