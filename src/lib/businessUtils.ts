@@ -124,7 +124,7 @@ export const calculateDashboardMetrics = (
     (sum, inv) => sum + (inv.earnings || 0),
     0
   );
-  const totalEarnings = referralIncome + personalEarnings;
+  const totalEarnings = referralIncome + personalEarnings + HISTORICAL_EARNINGS;
 
   const expiringToday = [
     ...activeReferralOrders,
@@ -360,3 +360,4 @@ export const searchItems = <T extends { name: string; phone?: string }>(
       (item.phone && item.phone.toLowerCase().includes(term))
   );
 };
+export const HISTORICAL_EARNINGS = 433.67;
