@@ -274,6 +274,7 @@ export const useDashboardMetrics = () => {
     metrics,
     topReferrals,
     expiringToday,
+    referrals,
   };
 };
 

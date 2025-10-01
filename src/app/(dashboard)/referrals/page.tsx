@@ -354,7 +354,8 @@ export default function ReferralsPage() {
 
       <div className="bg-white p-6 rounded-lg border border-gray-200">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
+          <div className="flex-1 max-w-md">
+            {" "}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -366,11 +367,12 @@ export default function ReferralsPage() {
               />
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-1 justify-end">
+            {" "}
             <select
               value={filterGeneration}
               onChange={(e) => setFilterGeneration(e.target.value as any)}
-              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-md"
+              className="block w-full max-w-xs pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-md"
             >
               <option value="all">Todas las generaciones</option>
               <option value="1">Primera generación</option>
@@ -379,7 +381,7 @@ export default function ReferralsPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-md"
+              className="block w-full max-w-xs pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-md"
             >
               <option value="all">Todos los estados</option>
               <option value="active">Activo</option>

@@ -14,10 +14,11 @@ import { useDashboardMetrics } from "@/hooks";
 import { formatCurrency } from "@/lib/businessUtils";
 import MetricCard from "@/components/ui/MetricCard";
 import ClientOnly from "@/components/ui/ClientOnly";
-
+import { calculateReferralOnlyEarnings } from "@/lib/businessUtils";
 export default function DashboardPage() {
-  const { metrics, topReferrals, expiringToday } = useDashboardMetrics();
-
+  const { metrics, topReferrals, expiringToday, referrals } =
+    useDashboardMetrics();
+  const referralOnlyEarnings = calculateReferralOnlyEarnings(referrals);
   return (
     <div className="space-y-4">
       {" "}
@@ -83,17 +84,17 @@ export default function DashboardPage() {
         <ClientOnly
           fallback={
             <MetricCard
-              title="Vencen Hoy"
+              title="Ganancias por Referidos"
               value="Cargando..."
-              icon={<Calendar className="h-5 w-5" />}
+              icon={<TrendingUp className="h-5 w-5" />}
             />
           }
         >
           <MetricCard
-            title="Vencen Hoy"
-            value={metrics.expiringToday.toString()}
-            icon={<Calendar className="h-5 w-5" />}
-            changeType={metrics.expiringToday > 0 ? "negative" : "neutral"}
+            title="Ganancias por Referidos"
+            value={formatCurrency(referralOnlyEarnings)}
+            icon={<TrendingUp className="h-5 w-5" />}
+            changeType="positive"
           />
         </ClientOnly>
       </div>

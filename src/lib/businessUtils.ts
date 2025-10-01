@@ -10,6 +10,7 @@ import {
   BUSINESS_CONSTANTS,
 } from "@/types";
 
+
 export const formatDate = (date: string): string => {
   if (!date) return "";
   const [year, month, day] = date.split("-");
@@ -90,6 +91,7 @@ export const calculateDashboardMetrics = (
   personalInvestments: PersonalInvestment[],
   leads: Lead[],
   currentDate?: string
+  
 ): DashboardMetrics => {
   const today = currentDate || new Date().toISOString().split("T")[0];
 
@@ -133,6 +135,7 @@ export const calculateDashboardMetrics = (
 
   const thirtyDaysAgo = addDays(today, -30);
   const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
+  
 
   const monthlyEarnings =
     activeReferralOrders.reduce((sum, ref) => {
@@ -153,6 +156,7 @@ export const calculateDashboardMetrics = (
     monthlyEarnings,
     expiringToday,
     activeLeads: interestedLeads.length,
+    
   };
 };
 
@@ -361,3 +365,8 @@ export const searchItems = <T extends { name: string; phone?: string }>(
   );
 };
 export const HISTORICAL_EARNINGS = 433.67;
+export const calculateReferralOnlyEarnings = (referrals: Referral[]): number => {
+  return referrals
+    .filter((r) => r.status === "active")
+    .reduce((sum, referral) => sum + (referral.userIncome || 0), 0);
+};
