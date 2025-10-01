@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useReferrals } from "@/hooks";
@@ -11,7 +11,7 @@ import {
   calculateExpirationDate,
   BUSINESS_CONSTANTS,
 } from "@/lib/businessUtils";
-import { UserPlus, Calculator } from "lucide-react";
+import { UserPlus, Calculator, X } from "lucide-react";
 
 interface AddReferralFormProps {
   onSuccess?: (msg?: string) => void;
@@ -26,7 +26,7 @@ export function AddReferralForm({
   referral,
   onUpdate,
 }: AddReferralFormProps) {
-  const { addReferral, updateReferral } = useReferrals();
+  const { addReferral, updateReferral, referrals } = useReferrals();
   const isEdit = !!referral;
 
   const [formData, setFormData] = useState({
@@ -45,6 +45,48 @@ export function AddReferralForm({
     totalEarned: 0,
   });
 
+  // 🔍 Autocompletado
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredReferrals, setFilteredReferrals] = useState<Referral[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Filtrar referidos activos al escribir
+  useEffect(() => {
+    if (!isEdit && formData.name.trim() !== "") {
+      const term = formData.name.toLowerCase();
+      const activeReferrals = referrals.filter((r) => r.status === "active");
+      const matches = activeReferrals.filter(
+        (r) =>
+          r.name.toLowerCase().includes(term) ||
+          r.wallet.toLowerCase().includes(term)
+      );
+      setFilteredReferrals(matches);
+      setShowSuggestions(matches.length > 0);
+    } else {
+      setShowSuggestions(false);
+      setFilteredReferrals([]);
+    }
+  }, [formData.name, referrals, isEdit]);
+
+  // Cerrar sugerencias al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        inputRef.current &&
+        suggestionsRef.current &&
+        !inputRef.current.contains(e.target as Node) &&
+        !suggestionsRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Resto de useEffects y handlers existentes...
   useEffect(() => {
     if (referral) {
       setFormData({
@@ -69,6 +111,7 @@ export function AddReferralForm({
       });
     }
   }, [referral]);
+
   useEffect(() => {
     if (!isEdit) {
       const today = new Date().toISOString().split("T")[0];
@@ -81,7 +124,6 @@ export function AddReferralForm({
   }, [isEdit]);
 
   const handleAmountChange = (amount: string) => {
-    // Permite decimales correctamente - usa parseFloat directamente
     const numAmount = parseFloat(amount) || 0;
     const referralEarnings = calculateReferralEarnings(numAmount);
     const myIncome = calculateUserIncome(
@@ -107,7 +149,6 @@ export function AddReferralForm({
 
   const handleGenerationChange = (generation: string) => {
     setFormData((prev) => ({ ...prev, generation }));
-
     if (formData.amount) {
       const numAmount = parseFloat(formData.amount) || 0;
       const referralEarnings = calculateReferralEarnings(numAmount);
@@ -115,7 +156,6 @@ export function AddReferralForm({
         referralEarnings,
         parseInt(generation) as 1 | 2
       );
-
       setCalculations({
         referralEarnings,
         myIncome,
@@ -124,14 +164,26 @@ export function AddReferralForm({
     }
   };
 
+  const handleSelectReferral = (ref: Referral) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: ref.name,
+      wallet: ref.wallet,
+    }));
+    setShowSuggestions(false);
+  };
+
+  const clearName = () => {
+    setFormData((prev) => ({ ...prev, name: "" }));
+    setShowSuggestions(false);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.name.trim() || !formData.wallet.trim() || !formData.amount) {
       onSuccess?.("Por favor completa todos los campos obligatorios");
       return;
     }
-
     const numAmount = parseFloat(formData.amount);
     if (numAmount <= 0) {
       onSuccess?.("El monto de inversión debe ser mayor a 0");
@@ -155,6 +207,7 @@ export function AddReferralForm({
       onSuccess?.("Referido actualizado exitosamente");
       return;
     }
+
     const referralData = {
       name: formData.name.trim(),
       wallet: formData.wallet.trim(),
@@ -199,21 +252,64 @@ export function AddReferralForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <div>
+            <div className="relative" ref={suggestionsRef}>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre Completo *
               </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Nombre del referido"
-                required
-              />
+              <div className="relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  onFocus={() => {
+                    if (!isEdit && formData.name.trim() !== "") {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 pr-8"
+                  placeholder="Nombre del referido"
+                  required
+                />
+                {formData.name && !isEdit && (
+                  <button
+                    type="button"
+                    onClick={clearName}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Dropdown de sugerencias */}
+              {showSuggestions && filteredReferrals.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {filteredReferrals.map((ref) => (
+                    <div
+                      key={ref.id}
+                      onClick={() => handleSelectReferral(ref)}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    >
+                      <p className="font-medium text-gray-900">{ref.name}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {ref.wallet}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Gen {ref.generation} •{" "}
+                        {ref.amount.toLocaleString("es-ES", {
+                          style: "currency",
+                          currency: "USD",
+                        })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Dirección de Billetera *
@@ -231,6 +327,7 @@ export function AddReferralForm({
             </div>
           </div>
 
+          {/* Resto del formulario igual... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
