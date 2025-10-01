@@ -98,7 +98,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
     }
   };
 
-  const sidebarWidth = isCollapsed ? "w-16" : "w-64";
+  const sidebarWidth = isCollapsed ? "w-16" : "w-50";
   const mobileSidebarClass = isMobileOpen
     ? "translate-x-0"
     : "-translate-x-full";

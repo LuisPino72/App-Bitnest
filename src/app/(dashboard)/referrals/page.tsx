@@ -10,7 +10,8 @@ import {
   X,
   RefreshCw,
   CheckCircle,
-  DollarSign, TrendingUp
+  DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import { useReferrals, useSearch, usePagination } from "@/hooks";
 import {
@@ -18,7 +19,7 @@ import {
   formatDate,
   getUniqueReferrals,
   getTotalInvestments,
-  getTotalEarnings
+  getTotalEarnings,
 } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
 import { Toast } from "@/components/ui/Toast";
@@ -157,25 +158,25 @@ export default function ReferralsPage() {
     switch (status) {
       case "active":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             Activo
           </span>
         );
       case "completed":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             Completado
           </span>
         );
       case "expired":
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             Expirado
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
             {status}
           </span>
         );
@@ -184,7 +185,7 @@ export default function ReferralsPage() {
 
   const uniqueReferrals = getUniqueReferrals(referrals);
   const totalInvestment = getTotalInvestments(referrals);
-const totalEarnings = getTotalEarnings(referrals);
+  const totalEarnings = getTotalEarnings(referrals);
 
   return (
     <div className="space-y-6">
@@ -391,54 +392,54 @@ const totalEarnings = getTotalEarnings(referrals);
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-full table-auto divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32"
                 >
                   Referido
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
                 >
                   Generación
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
                 >
                   Inversión
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
                 >
                   Ganancias
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
                 >
                   Tu Ingreso
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
                 >
                   Estado
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
                 >
                   Vencimiento
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
                 >
                   Acciones
                 </th>
@@ -447,16 +448,14 @@ const totalEarnings = getTotalEarnings(referrals);
             <tbody className="bg-white divide-y divide-gray-200">
               {currentItems.map((referral) => (
                 <tr key={referral.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {referral.name}
-                      </div>
+                  <td className="px-3 py-2 whitespace-nowrap w-32">
+                    <div className="font-medium text-gray-900">
+                      {referral.name}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-20">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         referral.generation === 1
                           ? "bg-blue-100 text-blue-800"
                           : "bg-yellow-100 text-yellow-800"
@@ -465,23 +464,23 @@ const totalEarnings = getTotalEarnings(referrals);
                       Gen {referral.generation}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-28 font-medium">
                     {formatCurrency(referral.amount)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-green-600">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-28 text-green-600">
                     {formatCurrency(referral.earnings)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-blue-600">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-28 font-medium text-blue-600">
                     {formatCurrency(referral.userIncome)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-24">
                     {getStatusBadge(referral.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-28">
                     {formatDate(referral.expirationDate)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
+                  <td className="px-3 py-2 whitespace-nowrap text-center w-20">
+                    <div className="flex justify-center gap-2">
                       <button
                         onClick={() => setEditingReferral(referral.id)}
                         className="text-blue-600 hover:text-blue-900 transition-colors"
