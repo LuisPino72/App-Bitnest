@@ -1,30 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Referral, PersonalInvestment, Lead, DashboardMetrics } from '@/types';
-import { 
-  ReferralService, 
-  PersonalInvestmentService, 
-  LeadService 
-} from '@/lib/firebaseService';
-import { 
-  calculateDashboardMetrics, 
-  getTopReferrals, 
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Referral, PersonalInvestment, Lead, DashboardMetrics } from "@/types";
+import {
+  ReferralService,
+  PersonalInvestmentService,
+  LeadService,
+} from "@/lib/firebaseService";
+import {
+  calculateDashboardMetrics,
+  getTopReferrals,
   getExpiringToday,
   calculateReferralEarnings,
   calculateUserIncome,
   calculatePersonalEarnings,
   calculateExpirationDate,
-  generateId
-} from '@/lib/businessUtils';
-
+  generateId,
+} from "@/lib/businessUtils";
 
 export const useFirebaseReferrals = () => {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  
   useEffect(() => {
     const unsubscribe = ReferralService.subscribe((data) => {
       setReferrals(data);
@@ -35,69 +33,100 @@ export const useFirebaseReferrals = () => {
     return () => unsubscribe();
   }, []);
 
-  const addReferral = useCallback(async (referralData: Omit<Referral, 'id' | 'earnings' | 'userIncome' | 'totalEarned'>) => {
-    try {
-      setError(null);
-      const earnings = calculateReferralEarnings(referralData.amount);
-      const userIncome = calculateUserIncome(earnings, referralData.generation);
-
-      const newReferral: Omit<Referral, 'id'> = {
-        ...referralData,
-        earnings,
-        userIncome,
-        totalEarned: earnings,
-      };
-
-      await ReferralService.create(newReferral);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error adding referral');
-      throw err;
-    }
-  }, []);
-
-  const updateReferral = useCallback(async (id: string, updates: Partial<Referral>) => {
-    try {
-      setError(null);
-      
-      if (updates.amount !== undefined || updates.generation !== undefined) {
-        const currentReferral = referrals.find(r => r.id === id);
-        if (currentReferral) {
-          const updatedData = { ...currentReferral, ...updates };
-          updatedData.earnings = calculateReferralEarnings(updatedData.amount);
-          updatedData.userIncome = calculateUserIncome(updatedData.earnings, updatedData.generation);
-          updatedData.totalEarned = updatedData.earnings;
-          await ReferralService.update(id, updatedData);
-        }
-      } else {
-        await ReferralService.update(id, updates);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error updating referral');
-      throw err;
-    }
+  const getTotalCommission = useCallback((): number => {
+    return referrals.reduce((sum: number, referral) => {
+      return sum + (referral.userIncome || 0);
+    }, 0);
   }, [referrals]);
+
+  const getActiveReferrals = useCallback((): Referral[] => {
+    return referrals.filter((referral) => referral.status === "active");
+  }, [referrals]);
+  const addReferral = useCallback(
+    async (
+      referralData: Omit<
+        Referral,
+        "id" | "earnings" | "userIncome" | "totalEarned"
+      >
+    ) => {
+      try {
+        setError(null);
+        const earnings = calculateReferralEarnings(referralData.amount);
+        const userIncome = calculateUserIncome(
+          earnings,
+          referralData.generation
+        );
+
+        const newReferral: Omit<Referral, "id"> = {
+          ...referralData,
+          earnings,
+          userIncome,
+          totalEarned: earnings,
+        };
+
+        await ReferralService.create(newReferral);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error adding referral");
+        throw err;
+      }
+    },
+    []
+  );
+
+  const updateReferral = useCallback(
+    async (id: string, updates: Partial<Referral>) => {
+      try {
+        setError(null);
+
+        if (updates.amount !== undefined || updates.generation !== undefined) {
+          const currentReferral = referrals.find((r) => r.id === id);
+          if (currentReferral) {
+            const updatedData = { ...currentReferral, ...updates };
+            updatedData.earnings = calculateReferralEarnings(
+              updatedData.amount
+            );
+            updatedData.userIncome = calculateUserIncome(
+              updatedData.earnings,
+              updatedData.generation
+            );
+            updatedData.totalEarned = updatedData.earnings;
+            await ReferralService.update(id, updatedData);
+          }
+        } else {
+          await ReferralService.update(id, updates);
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Error updating referral"
+        );
+        throw err;
+      }
+    },
+    [referrals]
+  );
 
   const deleteReferral = useCallback(async (id: string) => {
     try {
       setError(null);
       await ReferralService.delete(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting referral');
+      setError(err instanceof Error ? err.message : "Error deleting referral");
       throw err;
     }
   }, []);
 
-  const getReferralById = useCallback((id: string): Referral | undefined => {
-    return referrals.find(referral => referral.id === id);
-  }, [referrals]);
-
-  const getActiveReferrals = useCallback((): Referral[] => {
-    return referrals.filter(referral => referral.status === 'active');
-  }, [referrals]);
-
-  const getReferralsByGeneration = useCallback((generation: 1 | 2): Referral[] => {
-    return referrals.filter(referral => referral.generation === generation);
-  }, [referrals]);
+  const getReferralById = useCallback(
+    (id: string): Referral | undefined => {
+      return referrals.find((referral) => referral.id === id);
+    },
+    [referrals]
+  );
+  const getReferralsByGeneration = useCallback(
+    (generation: 1 | 2): Referral[] => {
+      return referrals.filter((referral) => referral.generation === generation);
+    },
+    [referrals]
+  );
 
   return {
     referrals,
@@ -109,16 +138,15 @@ export const useFirebaseReferrals = () => {
     getReferralById,
     getActiveReferrals,
     getReferralsByGeneration,
+    getTotalCommission,
   };
 };
-
 
 export const useFirebasePersonalInvestments = () => {
   const [investments, setInvestments] = useState<PersonalInvestment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  
   useEffect(() => {
     const unsubscribe = PersonalInvestmentService.subscribe((data) => {
       setInvestments(data);
@@ -129,57 +157,76 @@ export const useFirebasePersonalInvestments = () => {
     return () => unsubscribe();
   }, []);
 
-  const addInvestment = useCallback(async (investmentData: Omit<PersonalInvestment, 'id' | 'earnings' | 'totalEarned'>) => {
-    try {
-      setError(null);
-      const earnings = calculatePersonalEarnings(investmentData.amount);
+  const addInvestment = useCallback(
+    async (
+      investmentData: Omit<
+        PersonalInvestment,
+        "id" | "earnings" | "totalEarned"
+      >
+    ) => {
+      try {
+        setError(null);
+        const earnings = calculatePersonalEarnings(investmentData.amount);
 
-      const newInvestment: Omit<PersonalInvestment, 'id'> = {
-        ...investmentData,
-        earnings,
-        totalEarned: earnings,
-      };
+        const newInvestment: Omit<PersonalInvestment, "id"> = {
+          ...investmentData,
+          earnings,
+          totalEarned: earnings,
+        };
 
-      await PersonalInvestmentService.create(newInvestment);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error adding investment');
-      throw err;
-    }
-  }, []);
-
-  const updateInvestment = useCallback(async (id: string, updates: Partial<PersonalInvestment>) => {
-    try {
-      setError(null);
-      
-      if (updates.amount !== undefined) {
-        const currentInvestment = investments.find(inv => inv.id === id);
-        if (currentInvestment) {
-          const updatedData = { ...currentInvestment, ...updates };
-          updatedData.earnings = calculatePersonalEarnings(updatedData.amount);
-          updatedData.totalEarned = updatedData.earnings;
-          await PersonalInvestmentService.update(id, updatedData);
-        }
-      } else {
-        await PersonalInvestmentService.update(id, updates);
+        await PersonalInvestmentService.create(newInvestment);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Error adding investment"
+        );
+        throw err;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error updating investment');
-      throw err;
-    }
-  }, [investments]);
+    },
+    []
+  );
+
+  const updateInvestment = useCallback(
+    async (id: string, updates: Partial<PersonalInvestment>) => {
+      try {
+        setError(null);
+
+        if (updates.amount !== undefined) {
+          const currentInvestment = investments.find((inv) => inv.id === id);
+          if (currentInvestment) {
+            const updatedData = { ...currentInvestment, ...updates };
+            updatedData.earnings = calculatePersonalEarnings(
+              updatedData.amount
+            );
+            updatedData.totalEarned = updatedData.earnings;
+            await PersonalInvestmentService.update(id, updatedData);
+          }
+        } else {
+          await PersonalInvestmentService.update(id, updates);
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Error updating investment"
+        );
+        throw err;
+      }
+    },
+    [investments]
+  );
 
   const deleteInvestment = useCallback(async (id: string) => {
     try {
       setError(null);
       await PersonalInvestmentService.delete(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting investment');
+      setError(
+        err instanceof Error ? err.message : "Error deleting investment"
+      );
       throw err;
     }
   }, []);
 
   const getActiveInvestments = useCallback((): PersonalInvestment[] => {
-    return investments.filter(investment => investment.status === 'active');
+    return investments.filter((investment) => investment.status === "active");
   }, [investments]);
 
   return {
@@ -193,13 +240,11 @@ export const useFirebasePersonalInvestments = () => {
   };
 };
 
-
 export const useFirebaseLeads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  
   useEffect(() => {
     const unsubscribe = LeadService.subscribe((data) => {
       setLeads(data);
@@ -210,12 +255,12 @@ export const useFirebaseLeads = () => {
     return () => unsubscribe();
   }, []);
 
-  const addLead = useCallback(async (leadData: Omit<Lead, 'id'>) => {
+  const addLead = useCallback(async (leadData: Omit<Lead, "id">) => {
     try {
       setError(null);
       await LeadService.create(leadData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error adding lead');
+      setError(err instanceof Error ? err.message : "Error adding lead");
       throw err;
     }
   }, []);
@@ -225,7 +270,7 @@ export const useFirebaseLeads = () => {
       setError(null);
       await LeadService.update(id, updates);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error updating lead');
+      setError(err instanceof Error ? err.message : "Error updating lead");
       throw err;
     }
   }, []);
@@ -235,14 +280,17 @@ export const useFirebaseLeads = () => {
       setError(null);
       await LeadService.delete(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting lead');
+      setError(err instanceof Error ? err.message : "Error deleting lead");
       throw err;
     }
   }, []);
 
-  const getLeadsByStatus = useCallback((status: 'interested' | 'doubtful' | 'rejected'): Lead[] => {
-    return leads.filter(lead => lead.status === status);
-  }, [leads]);
+  const getLeadsByStatus = useCallback(
+    (status: "interested" | "doubtful" | "rejected"): Lead[] => {
+      return leads.filter((lead) => lead.status === status);
+    },
+    [leads]
+  );
 
   return {
     leads,
@@ -255,14 +303,13 @@ export const useFirebaseLeads = () => {
   };
 };
 
-
 export const useFirebaseDashboardMetrics = () => {
   const { referrals, loading: referralsLoading } = useFirebaseReferrals();
-  const { investments, loading: investmentsLoading } = useFirebasePersonalInvestments();
+  const { investments, loading: investmentsLoading } =
+    useFirebasePersonalInvestments();
   const { leads, loading: leadsLoading } = useFirebaseLeads();
   const [isClient, setIsClient] = useState(false);
 
-  
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -271,7 +318,6 @@ export const useFirebaseDashboardMetrics = () => {
 
   const metrics = useMemo(() => {
     if (loading) {
-      
       return {
         totalInvestments: 0,
         totalReferrals: 0,
@@ -280,13 +326,19 @@ export const useFirebaseDashboardMetrics = () => {
         totalEarnings: 0,
         monthlyEarnings: 0,
         expiringToday: 0,
-        activeLeads: 0
+        activeLeads: 0,
       };
     }
 
-   
-    const currentDate = isClient ? new Date().toISOString().split('T')[0] : undefined;
-    return calculateDashboardMetrics(referrals, investments, leads, currentDate);
+    const currentDate = isClient
+      ? new Date().toISOString().split("T")[0]
+      : undefined;
+    return calculateDashboardMetrics(
+      referrals,
+      investments,
+      leads,
+      currentDate
+    );
   }, [referrals, investments, leads, loading, isClient]);
 
   const topReferrals = useMemo(() => {
