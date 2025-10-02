@@ -1,335 +1,381 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Database, FileText, Users, DollarSign } from "lucide-react";
-import { useFirebaseReferrals } from "@/hooks/firebaseHooks";
-import { useFirebasePersonalInvestments } from "@/hooks/firebaseHooks";
+import { Users, Calculator } from "lucide-react";
 import { formatCurrency } from "@/lib/businessUtils";
-import { Referral, PersonalInvestment } from "@/types";
 
-interface ExportData {
-  timestamp: string;
-  summary: {
-    totalReferrals: number;
-    activeReferrals: number;
-    totalCommission: number;
-    totalInvested: number;
-    totalEarnings: number;
-    netWorth: number;
-  };
-  referrals: Array<{
-    name: string;
-    phone?: string;
-    wallet: string;
-    status: string;
-    generation: number;
-    investmentAmount: number;
-    commission: number;
-    joinDate: string;
-    lastCommissionDate: string;
-  }>;
-  investments: Array<{
-    amount: number;
-    startDate: string;
-    expirationDate: string;
-    earnings: number;
-    status: string;
-    cycleCount: number;
-  }>;
+interface ReferralInput {
+  generation: 1 | 2;
+  amount: number;
+  cycles: number;
 }
 
-export default function ExportPage() {
-  const { referrals, getActiveReferrals, getTotalCommission } =
-    useFirebaseReferrals();
-  const { investments, getActiveInvestments } =
-    useFirebasePersonalInvestments();
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportedData, setExportedData] = useState<ExportData | null>(null);
+interface CycleDetail {
+  cycle: number;
+  referralAmount: number;
+  referralEarnings: number;
+  userEarnings: number;
+  cumulativeUserEarnings: number;
+}
 
-  const exportToCSV = async () => {
-    setIsExporting(true);
+export default function ReferralIncomeCalculator() {
+  const [referralInput, setReferralInput] = useState<ReferralInput>({
+    generation: 1,
+    amount: 10,
+    cycles: 1,
+  });
+  const [result, setResult] = useState<any>(null);
+  const [cycleDetails, setCycleDetails] = useState<CycleDetail[]>([]);
 
-    try {
-      const activeReferrals = getActiveReferrals();
-      const totalCommission = getTotalCommission();
-      const activeInvestments = getActiveInvestments();
+  const calculateExponentialGrowth = () => {
+    if (referralInput.amount <= 0 || referralInput.cycles <= 0) return;
 
-      const totalInvested = activeInvestments.reduce(
-        (sum: number, inv: PersonalInvestment) => sum + inv.amount,
-        0
-      );
+    const commissionRate = referralInput.generation === 1 ? 0.2 : 0.1;
+    const details: CycleDetail[] = [];
+    let currentAmount = referralInput.amount;
+    let cumulativeEarnings = 0;
 
-      const totalEarnings = investments.reduce(
-        (sum: number, inv: PersonalInvestment) => sum + inv.earnings,
-        0
-      );
+    for (let cycle = 1; cycle <= referralInput.cycles; cycle++) {
+      const referralEarnings = currentAmount * 0.24;
 
-      const exportData: ExportData = {
-        timestamp: new Date().toISOString(),
-        summary: {
-          totalReferrals: referrals.length,
-          activeReferrals: activeReferrals.length,
-          totalCommission: totalCommission,
-          totalInvested: totalInvested,
-          totalEarnings: totalEarnings,
-          netWorth: totalInvested + totalEarnings,
-        },
-        referrals: referrals.map((ref: Referral) => ({
-          name: ref.name,
-          phone: ref.phone,
-          wallet: ref.wallet,
-          status: ref.status,
-          generation: ref.generation,
-          investmentAmount: ref.amount,
-          commission: ref.userIncome || 0,
-          joinDate: ref.startDate,
-          lastCommissionDate: ref.expirationDate,
-        })),
-        investments: investments.map((inv: PersonalInvestment) => ({
-          amount: inv.amount,
-          startDate: inv.startDate,
-          expirationDate: inv.expirationDate,
-          earnings: inv.earnings,
-          status: inv.status,
-          cycleCount: inv.cycleCount,
-        })),
-      };
+      const userEarnings = referralEarnings * commissionRate;
 
-      setExportedData(exportData);
+      cumulativeEarnings += userEarnings;
 
-      exportDataToCSV(exportData);
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      alert("Error al exportar los datos");
-    } finally {
-      setIsExporting(false);
+      details.push({
+        cycle,
+        referralAmount: parseFloat(currentAmount.toFixed(2)),
+        referralEarnings: parseFloat(referralEarnings.toFixed(2)),
+        userEarnings: parseFloat(userEarnings.toFixed(2)),
+        cumulativeUserEarnings: parseFloat(cumulativeEarnings.toFixed(2)),
+      });
+
+      currentAmount += referralEarnings;
     }
+
+    const totalResult = {
+      totalIncome: cumulativeEarnings,
+      cycles: referralInput.cycles,
+      initialAmount: referralInput.amount,
+      finalAmount: parseFloat(currentAmount.toFixed(2)),
+      commissionRate: commissionRate * 100,
+      cycleDetails: details,
+    };
+
+    setResult(totalResult);
+    setCycleDetails(details);
   };
 
-  const exportDataToCSV = (data: ExportData) => {
-    let csvContent = "DATOS DE REFERIDOS\n\n";
+  const handleCalculate = () => {
+    calculateExponentialGrowth();
+  };
 
-    csvContent +=
-      "Nombre,Email,Teléfono,Wallet,Estado,Generación,Inversión,Comisión,Fecha Ingreso,Última Comisión\n";
-
-    data.referrals.forEach((ref) => {
-      csvContent += `"${ref.name}","","${ref.phone || ""}","${ref.wallet}","${
-        ref.status
-      }","${ref.generation}","${formatCurrency(
-        ref.investmentAmount
-      )}","${formatCurrency(ref.commission)}","${ref.joinDate}","${
-        ref.lastCommissionDate || "N/A"
-      }"\n`;
+  const handleReset = () => {
+    setReferralInput({
+      generation: 1,
+      amount: 10,
+      cycles: 1,
     });
-
-    csvContent += "\n\nDATOS DE INVERSIONES\n\n";
-
-    csvContent +=
-      "Monto,Fecha Inicio,Fecha Vencimiento,Ganancias,Estado,Ciclo\n";
-
-    data.investments.forEach((inv) => {
-      csvContent += `"${formatCurrency(inv.amount)}","${inv.startDate}","${
-        inv.expirationDate
-      }","${formatCurrency(inv.earnings)}","${inv.status}","${
-        inv.cycleCount
-      }"\n`;
-    });
-
-    csvContent += `\n\nRESUMEN\n`;
-    csvContent += `Total Referidos: ${data.summary.totalReferrals}\n`;
-    csvContent += `Referidos Activos: ${data.summary.activeReferrals}\n`;
-    csvContent += `Comisión Total: ${formatCurrency(
-      data.summary.totalCommission
-    )}\n`;
-    csvContent += `Total Invertido: ${formatCurrency(
-      data.summary.totalInvested
-    )}\n`;
-    csvContent += `Ganancias Totales: ${formatCurrency(
-      data.summary.totalEarnings
-    )}\n`;
-    csvContent += `Patrimonio Neto: ${formatCurrency(data.summary.netWorth)}\n`;
-    csvContent += `Fecha de Exportación: ${new Date().toLocaleString()}\n`;
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `bitnest_export_${new Date().toISOString().split("T")[0]}.csv`
-    );
-    link.style.visibility = "hidden";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setResult(null);
+    setCycleDetails([]);
   };
 
-  const exportToJSON = () => {
-    if (!exportedData) return;
-
-    const jsonContent = JSON.stringify(exportedData, null, 2);
-    const blob = new Blob([jsonContent], { type: "application/json" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `bitnest_export_${new Date().toISOString().split("T")[0]}.json`
-    );
-    link.style.visibility = "hidden";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const commissionRate = referralInput.generation === 1 ? 0.2 : 0.1;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Exportar Datos</h1>
-          <p className="text-gray-600 mt-2">
-            Exporta tus datos actuales de Firebase a diferentes formatos
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center mb-4">
-            <Database className="h-8 w-8 text-blue-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Datos en Firebase</p>
-              <p className="text-2xl font-bold">
-                {referrals.length + investments.length}
-              </p>
-            </div>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Referidos:</span>
-              <span className="font-medium">{referrals.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Inversiones:</span>
-              <span className="font-medium">{investments.length}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center mb-4">
-            <Users className="h-8 w-8 text-green-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Referidos Activos</p>
-              <p className="text-2xl font-bold">
-                {getActiveReferrals().length}
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-600">
-            Comisión total: {formatCurrency(getTotalCommission())}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center mb-4">
-            <DollarSign className="h-8 w-8 text-purple-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Inversiones Activas</p>
-              <p className="text-2xl font-bold">
-                {getActiveInvestments().length}
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-600">
-            Total invertido:{" "}
-            {formatCurrency(
-              getActiveInvestments().reduce(
-                (sum: number, inv: PersonalInvestment) => sum + inv.amount,
-                0
-              )
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Formatos de Exportación
+    <div className="card p-6">
+      <div className="flex items-center mb-6">
+        <Users className="h-6 w-6 text-primary-600 mr-2" />
+        <h2 className="text-xl font-semibold text-gray-900">
+          Calculadora de Ingresos por Referidos
         </h2>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 border border-gray-200 rounded-lg">
-            <div className="flex items-center mb-4">
-              <FileText className="h-8 w-8 text-green-500" />
-              <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">CSV</h3>
-                <p className="text-sm text-gray-600">
-                  Formato compatible con Excel
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="font-medium text-gray-900">
+              Configuración del Referido
+            </h3>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Generación del Referido
+              </label>
+              <select
+                value={referralInput.generation}
+                onChange={(e) =>
+                  setReferralInput({
+                    ...referralInput,
+                    generation: parseInt(e.target.value) as 1 | 2,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value={1}>Primera Generación (20% comisión)</option>
+                <option value={2}>Segunda Generación (10% comisión)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Monto de Inversión Inicial del Referido ($)
+              </label>
+              <input
+                type="number"
+                value={referralInput.amount}
+                onChange={(e) =>
+                  setReferralInput({
+                    ...referralInput,
+                    amount: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                min="10"
+                step="1"
+                placeholder="Ej: 10"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ciclos de Inversión
+              </label>
+              <input
+                type="number"
+                value={referralInput.cycles}
+                onChange={(e) =>
+                  setReferralInput({
+                    ...referralInput,
+                    cycles: parseInt(e.target.value) || 1,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                min="1"
+                max="36"
+                placeholder="Ej: 3"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Cada ciclo dura 28 días (crecimiento exponencial con
+                reinversión)
+              </p>
+            </div>
+          </div>
+
+          {result && (
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-medium text-blue-800 mb-3">
+                Resumen del Cálculo
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Inversión inicial:</span>
+                  <span className="font-medium">
+                    {formatCurrency(referralInput.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">
+                    Inversión final (ciclo {referralInput.cycles}):
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrency(result.finalAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">
+                    Tu comisión ({commissionRate * 100}%):
+                  </span>
+                  <span className="font-medium text-green-600">
+                    {formatCurrency(result.totalIncome)}
+                  </span>
+                </div>
+                <div className="border-t border-blue-200 pt-2 mt-2">
+                  <div className="flex justify-between">
+                    <span className="text-blue-800 font-medium">
+                      Crecimiento total del referido:
+                    </span>
+                    <span className="font-bold text-purple-700">
+                      +
+                      {(
+                        ((result.finalAmount - referralInput.amount) /
+                          referralInput.amount) *
+                        100
+                      ).toFixed(1)}
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleCalculate}
+              className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+            >
+              <Calculator className="h-4 w-4 mr-2" />
+              Calcular Proyección Completa
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+            >
+              Limpiar
+            </button>
+          </div>
+
+          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <h4 className="font-medium text-amber-800 mb-2">
+              Información de Comisiones
+            </h4>
+            <ul className="text-sm text-amber-700 space-y-1">
+              <li>
+                • <strong>Primera Generación:</strong> 20% de las ganancias del
+                referido
+              </li>
+              <li>
+                • <strong>Segunda Generación:</strong> 10% de las ganancias del
+                referido
+              </li>
+              <li>
+                • <strong>Ganancias del referido:</strong> 24% de su inversión
+                por ciclo
+              </li>
+              <li>
+                • <strong>Reinversión automática:</strong> Las ganancias se
+                suman al capital cada ciclo
+              </li>
+              <li>
+                • <strong>Duración del ciclo:</strong> 28 días
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          {result ? (
+            <div className="space-y-6">
+              <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-2">
+                  Ganancias Totales Proyectadas
+                </h3>
+                <div className="text-center mb-4">
+                  <div className="text-3xl font-bold text-green-600 mb-2">
+                    {formatCurrency(result.totalIncome)}
+                  </div>
+                  <div className="text-sm text-green-700">
+                    Para {referralInput.cycles} ciclo
+                    {referralInput.cycles !== 1 ? "s" : ""} con reinversión
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="text-green-600 font-medium">Comisión</div>
+                    <div className="font-bold text-green-700">
+                      {result.commissionRate}%
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="text-green-600 font-medium">
+                      Inversión Final
+                    </div>
+                    <div className="font-bold text-purple-600">
+                      {formatCurrency(result.finalAmount)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">
+                  Desglose por Ciclo (Crecimiento Exponencial)
+                </h4>
+
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {cycleDetails.map((detail) => (
+                    <div
+                      key={detail.cycle}
+                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-gray-900">
+                          Ciclo {detail.cycle}
+                        </span>
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                          Inversión: {formatCurrency(detail.referralAmount)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-600">
+                            Ganancia referido:
+                          </span>
+                          <div className="font-medium">
+                            {formatCurrency(detail.referralEarnings)}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Tu ganancia:</span>
+                          <div className="font-medium text-green-600">
+                            {formatCurrency(detail.userEarnings)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {detail.cycle < referralInput.cycles && (
+                        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
+                          Próximo ciclo:{" "}
+                          {formatCurrency(
+                            detail.referralAmount + detail.referralEarnings
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
+                <h4 className="font-medium text-primary-800 mb-3">
+                  Proyecciones Equivalentes
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="text-primary-700">Equivalente mensual:</div>
+                    <div className="font-bold text-primary-600">
+                      {formatCurrency((result.totalIncome * 13) / 12)}
+                    </div>
+                  </div>
+                  <div className="text-center p-3 bg-white rounded-lg">
+                    <div className="text-primary-700">Equivalente anual:</div>
+                    <div className="font-bold text-primary-600">
+                      {formatCurrency(
+                        result.totalIncome * (13 / referralInput.cycles)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              <div className="text-center">
+                <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-600">
+                  Configura los datos del referido
+                </p>
+                <p className="text-sm mt-1 text-gray-500">
+                  Selecciona generación, monto y ciclos para ver la proyección
+                  exponencial
                 </p>
               </div>
             </div>
-            <button
-              onClick={exportToCSV}
-              disabled={isExporting}
-              className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isExporting ? "Exportando..." : "Exportar a CSV"}
-            </button>
-          </div>
-
-          <div className="p-6 border border-gray-200 rounded-lg">
-            <div className="flex items-center mb-4">
-              <Database className="h-8 w-8 text-blue-500" />
-              <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">JSON</h3>
-                <p className="text-sm text-gray-600">Formato estructurado</p>
-              </div>
-            </div>
-            <button
-              onClick={exportToJSON}
-              disabled={!exportedData || isExporting}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Exportar a JSON
-            </button>
-          </div>
+          )}
         </div>
-
-        {exportedData && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="font-medium text-green-800 mb-2">
-              Exportación completada
-            </h3>
-            <p className="text-sm text-green-700">
-              Se exportaron {exportedData.referrals.length} referidos y{" "}
-              {exportedData.investments.length} inversiones.
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-medium text-blue-800 mb-2">
-          Información importante
-        </h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>
-            • Los datos se obtienen directamente de Firebase en tiempo real
-          </li>
-          <li>
-            • La exportación incluye todos los datos actuales de referidos e
-            inversiones
-          </li>
-          <li>• El formato CSV es ideal para abrir en Excel o Google Sheets</li>
-          <li>• El formato JSON es útil para análisis de datos o backups</li>
-        </ul>
       </div>
     </div>
   );
