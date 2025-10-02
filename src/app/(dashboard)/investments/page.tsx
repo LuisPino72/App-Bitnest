@@ -332,6 +332,11 @@ export default function InvestmentsPage() {
     setCycleModalInvestment(null);
     showToast("Reinversión exitosa. El ciclo ha sido actualizado.", "success");
   };
+  const investmentsExpiringToday = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+    return activeInvestments.filter((inv) => inv.expirationDate === today)
+      .length;
+  }, [activeInvestments]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -370,6 +375,19 @@ export default function InvestmentsPage() {
     setTimeout(() => setToast(null), 2500);
   };
 
+  const calculateProjection = (
+    initialAmount: number,
+    cycles: number
+  ): number => {
+    if (initialAmount === 0) return 0;
+
+    let amount = initialAmount;
+    for (let i = 0; i < cycles; i++) {
+      amount = amount * 1.24;
+    }
+    return parseFloat(amount.toFixed(2));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -392,43 +410,44 @@ export default function InvestmentsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-primary-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Total Invertido</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(totalInvested)}
-              </p>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <DollarSign className="h-8 w-8 text-primary-500 mb-2" />
+            <p className="text-sm text-gray-600">Total Invertido</p>
+            <p className="text-2xl font-bold">
+              {formatCurrency(totalInvested)}
+            </p>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-success-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Ganancias Totales</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(totalEarnings)}
-              </p>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <TrendingUp className="h-8 w-8 text-success-500 mb-2" />
+            <p className="text-sm text-gray-600">Ganancias Totales</p>
+            <p className="text-2xl font-bold">
+              {formatCurrency(totalEarnings)}
+            </p>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-warning-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Inversiones Activas</p>
-              <p className="text-2xl font-bold">{activeInvestments.length}</p>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <Calendar className="h-8 w-8 text-warning-500 mb-2" />
+            <p className="text-sm text-gray-600">Inversiones Activas</p>
+            <p className="text-2xl font-bold">{activeInvestments.length}</p>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-success-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">ROI Promedio</p>
-              <p className="text-2xl font-bold">24%</p>
-            </div>
+          <div className="flex flex-col items-center text-center">
+            <Calendar className="h-8 w-8 text-orange-500 mb-2" />
+            <p className="text-sm text-gray-600">Vencen Hoy</p>
+            <p className="text-2xl font-bold text-center">
+              {investmentsExpiringToday > 0
+                ? `${investmentsExpiringToday} inversión${
+                    investmentsExpiringToday !== 1 ? "es" : ""
+                  }`
+                : "No finalizan inversiones el dia de hoy"}
+            </p>
           </div>
         </div>
       </div>
@@ -595,34 +614,51 @@ export default function InvestmentsPage() {
 
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Información del Ciclo
+            Proyección de Crecimiento
           </h3>
           <div className="space-y-4">
             <div className="p-4 bg-primary-50 rounded-lg">
               <div className="text-sm text-primary-800 font-medium">
-                Duración del Ciclo
+                3 Meses (3 ciclos)
               </div>
-              <div className="text-2xl font-bold text-primary-600">28 días</div>
+              <div className="text-2xl font-bold text-primary-600">
+                {formatCurrency(calculateProjection(totalInvested, 3))}
+              </div>
               <div className="text-xs text-primary-600 mt-1">
-                Por cada ciclo completado
+                Desde {formatCurrency(totalInvested)}
               </div>
             </div>
             <div className="p-4 bg-success-50 rounded-lg">
               <div className="text-sm text-success-800 font-medium">
-                Retorno Garantizado
+                6 Meses (6 ciclos)
               </div>
-              <div className="text-2xl font-bold text-success-600">24%</div>
+              <div className="text-2xl font-bold text-success-600">
+                {formatCurrency(calculateProjection(totalInvested, 6))}
+              </div>
               <div className="text-xs text-success-600 mt-1">
-                Sobre el capital invertido
+                Desde {formatCurrency(totalInvested)}
               </div>
             </div>
             <div className="p-4 bg-warning-50 rounded-lg">
               <div className="text-sm text-warning-800 font-medium">
-                Proyección Anual
+                9 Meses (9 ciclos)
               </div>
-              <div className="text-2xl font-bold text-warning-600">~312%</div>
+              <div className="text-2xl font-bold text-warning-600">
+                {formatCurrency(calculateProjection(totalInvested, 9))}
+              </div>
               <div className="text-xs text-warning-600 mt-1">
-                Reinvirtiendo ganancias (13 ciclos)
+                Desde {formatCurrency(totalInvested)}
+              </div>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="text-sm text-purple-800 font-medium">
+                12 Meses (13 ciclos)
+              </div>
+              <div className="text-2xl font-bold text-purple-600">
+                {formatCurrency(calculateProjection(totalInvested, 13))}
+              </div>
+              <div className="text-xs text-purple-600 mt-1">
+                Desde {formatCurrency(totalInvested)}
               </div>
             </div>
           </div>
