@@ -446,7 +446,7 @@ export default function InvestmentsPage() {
                 ? `${investmentsExpiringToday} inversión${
                     investmentsExpiringToday !== 1 ? "es" : ""
                   }`
-                : "No finalizan inversiones el dia de hoy"}
+                : "Hoy no finalizan inversiones"}
             </p>
           </div>
         </div>

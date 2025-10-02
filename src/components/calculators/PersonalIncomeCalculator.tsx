@@ -9,8 +9,8 @@ import {
 import { CalculatorInput } from '@/types';
 
 export default function PersonalIncomeCalculator() {
-  const [amount, setAmount] = useState<string>('10000');
-  const [cycles, setCycles] = useState<string>('3');
+  const [amount, setAmount] = useState<string>('10');
+  const [cycles, setCycles] = useState<string>('1');
   const [result, setResult] = useState<any>(null);
 
   const handleCalculate = () => {
@@ -26,8 +26,8 @@ export default function PersonalIncomeCalculator() {
   };
 
   const handleReset = () => {
-    setAmount('10000');
-    setCycles('3');
+    setAmount('10');
+    setCycles('1');
     setResult(null);
   };
 
@@ -41,16 +41,15 @@ export default function PersonalIncomeCalculator() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Input Section */}
         <div className="space-y-4">
           <div>
-            <label className="label">Monto de Inversión (€)</label>
+            <label className="label">Monto de Inversión ($)</label>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="input"
-              placeholder="10000"
+              placeholder="0"
               min="100"
               step="100"
             />
@@ -94,7 +93,6 @@ export default function PersonalIncomeCalculator() {
           </div>
         </div>
 
-        {/* Results Section */}
         <div>
           {result ? (
             <div className="space-y-4">
@@ -123,7 +121,6 @@ export default function PersonalIncomeCalculator() {
                 </div>
               </div>
 
-              {/* Cycle Breakdown */}
               <div className="overflow-hidden">
                 <h4 className="font-medium text-gray-900 mb-3">Desglose por Ciclos</h4>
                 <div className="max-h-64 overflow-y-auto">
