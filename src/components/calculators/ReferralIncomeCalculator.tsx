@@ -2,85 +2,50 @@
 
 import { useState } from "react";
 import { Users, Calculator } from "lucide-react";
-import { formatCurrency } from "@/lib/businessUtils";
+import {
+  calculateReferralIncomeProjection,
+  formatCurrency,
+} from "@/lib/businessUtils";
+import { ReferralCalculatorInput, ReferralCalculatorResult } from "@/types";
 
 interface ReferralInput {
   generation: 1 | 2;
   amount: number;
-  cycles: number;
-}
-
-interface CycleDetail {
-  cycle: number;
-  referralAmount: number;
-  referralEarnings: number;
-  userEarnings: number;
-  cumulativeUserEarnings: number;
+  count: number;
 }
 
 export default function ReferralIncomeCalculator() {
-  const [referralInput, setReferralInput] = useState<ReferralInput>({
+  const [input, setInput] = useState<ReferralInput>({
     generation: 1,
     amount: 10,
-    cycles: 1,
+    count: 1,
   });
-  const [result, setResult] = useState<any>(null);
-  const [cycleDetails, setCycleDetails] = useState<CycleDetail[]>([]);
-
-  const calculateExponentialGrowth = () => {
-    if (referralInput.amount <= 0 || referralInput.cycles <= 0) return;
-
-    const commissionRate = referralInput.generation === 1 ? 0.2 : 0.1;
-    const details: CycleDetail[] = [];
-    let currentAmount = referralInput.amount;
-    let cumulativeEarnings = 0;
-
-    for (let cycle = 1; cycle <= referralInput.cycles; cycle++) {
-      const referralEarnings = currentAmount * 0.24;
-
-      const userEarnings = referralEarnings * commissionRate;
-
-      cumulativeEarnings += userEarnings;
-
-      details.push({
-        cycle,
-        referralAmount: parseFloat(currentAmount.toFixed(2)),
-        referralEarnings: parseFloat(referralEarnings.toFixed(2)),
-        userEarnings: parseFloat(userEarnings.toFixed(2)),
-        cumulativeUserEarnings: parseFloat(cumulativeEarnings.toFixed(2)),
-      });
-
-      currentAmount += referralEarnings;
-    }
-
-    const totalResult = {
-      totalIncome: cumulativeEarnings,
-      cycles: referralInput.cycles,
-      initialAmount: referralInput.amount,
-      finalAmount: parseFloat(currentAmount.toFixed(2)),
-      commissionRate: commissionRate * 100,
-      cycleDetails: details,
-    };
-
-    setResult(totalResult);
-    setCycleDetails(details);
-  };
+  const [result, setResult] = useState<ReferralCalculatorResult | null>(null);
 
   const handleCalculate = () => {
-    calculateExponentialGrowth();
+    if (input.amount > 0 && input.count > 0) {
+      const calculationInput: ReferralCalculatorInput = {
+        referrals: [input],
+      };
+      const calculation = calculateReferralIncomeProjection(calculationInput);
+      setResult(calculation);
+    }
   };
 
   const handleReset = () => {
-    setReferralInput({
-      generation: 1,
-      amount: 10,
-      cycles: 1,
-    });
+    setInput({ generation: 1, amount: 10, count: 1 });
     setResult(null);
-    setCycleDetails([]);
   };
 
-  const commissionRate = referralInput.generation === 1 ? 0.2 : 0.1;
+  const updateInput = (field: keyof ReferralInput, value: string) => {
+    const numValue =
+      field === "generation"
+        ? (parseInt(value) as 1 | 2)
+        : parseFloat(value) || 0;
+    setInput((prev) => ({ ...prev, [field]: numValue }));
+  };
+
+  const commissionRate = input.generation === 1 ? 0.2 : 0.1;
 
   return (
     <div className="card p-6">
@@ -103,14 +68,9 @@ export default function ReferralIncomeCalculator() {
                 Generación del Referido
               </label>
               <select
-                value={referralInput.generation}
-                onChange={(e) =>
-                  setReferralInput({
-                    ...referralInput,
-                    generation: parseInt(e.target.value) as 1 | 2,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                value={input.generation}
+                onChange={(e) => updateInput("generation", e.target.value)}
+                className="input"
               >
                 <option value={1}>Primera Generación (20% comisión)</option>
                 <option value={2}>Segunda Generación (10% comisión)</option>
@@ -119,92 +79,54 @@ export default function ReferralIncomeCalculator() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Monto de Inversión Inicial del Referido ($)
+                Monto de Inversión ($)
               </label>
               <input
                 type="number"
-                value={referralInput.amount}
-                onChange={(e) =>
-                  setReferralInput({
-                    ...referralInput,
-                    amount: parseFloat(e.target.value) || 0,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                value={input.amount}
+                onChange={(e) => updateInput("amount", e.target.value)}
+                className="input"
                 min="10"
-                step="1"
-                placeholder="Ej: 10"
+                step="10"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ciclos de Inversión
+                Cantidad de Referidos
               </label>
               <input
                 type="number"
-                value={referralInput.cycles}
-                onChange={(e) =>
-                  setReferralInput({
-                    ...referralInput,
-                    cycles: parseInt(e.target.value) || 1,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                value={input.count}
+                onChange={(e) => updateInput("count", e.target.value)}
+                className="input"
                 min="1"
-                max="36"
-                placeholder="Ej: 3"
+                max="100"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Cada ciclo dura 28 días (crecimiento exponencial con
-                reinversión)
-              </p>
             </div>
           </div>
 
           {result && (
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="font-medium text-blue-800 mb-3">
-                Resumen del Cálculo
-              </h4>
+              <h4 className="font-medium text-blue-800 mb-3">Resumen</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-blue-700">Inversión inicial:</span>
+                  <span className="text-blue-700">Inversión por referido:</span>
                   <span className="font-medium">
-                    {formatCurrency(referralInput.amount)}
+                    {formatCurrency(input.amount)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-blue-700">
-                    Inversión final (ciclo {referralInput.cycles}):
-                  </span>
-                  <span className="font-medium">
-                    {formatCurrency(result.finalAmount)}
-                  </span>
+                  <span className="text-blue-700">Cantidad de referidos:</span>
+                  <span className="font-medium">{input.count}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-blue-700">
-                    Tu comisión ({commissionRate * 100}%):
+                <div className="flex justify-between border-t border-blue-200 pt-2">
+                  <span className="text-blue-700 font-medium">
+                    Tu ingreso total:
                   </span>
-                  <span className="font-medium text-green-600">
+                  <span className="font-bold text-green-600">
                     {formatCurrency(result.totalIncome)}
                   </span>
-                </div>
-                <div className="border-t border-blue-200 pt-2 mt-2">
-                  <div className="flex justify-between">
-                    <span className="text-blue-800 font-medium">
-                      Crecimiento total del referido:
-                    </span>
-                    <span className="font-bold text-purple-700">
-                      +
-                      {(
-                        ((result.finalAmount - referralInput.amount) /
-                          referralInput.amount) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -213,15 +135,12 @@ export default function ReferralIncomeCalculator() {
           <div className="flex gap-3">
             <button
               onClick={handleCalculate}
-              className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+              className="btn btn-primary btn-md flex-1"
             >
               <Calculator className="h-4 w-4 mr-2" />
-              Calcular Proyección Completa
+              Calcular
             </button>
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
-            >
+            <button onClick={handleReset} className="btn btn-secondary btn-md">
               Limpiar
             </button>
           </div>
@@ -232,23 +151,13 @@ export default function ReferralIncomeCalculator() {
             </h4>
             <ul className="text-sm text-amber-700 space-y-1">
               <li>
-                • <strong>Primera Generación:</strong> 20% de las ganancias del
-                referido
+                • <strong>Primera Generación:</strong> 20% de las ganancias
               </li>
               <li>
-                • <strong>Segunda Generación:</strong> 10% de las ganancias del
-                referido
+                • <strong>Segunda Generación:</strong> 10% de las ganancias
               </li>
               <li>
-                • <strong>Ganancias del referido:</strong> 24% de su inversión
-                por ciclo
-              </li>
-              <li>
-                • <strong>Reinversión automática:</strong> Las ganancias se
-                suman al capital cada ciclo
-              </li>
-              <li>
-                • <strong>Duración del ciclo:</strong> 28 días
+                • <strong>Ganancias del referido:</strong> 24% por ciclo
               </li>
             </ul>
           </div>
@@ -259,15 +168,14 @@ export default function ReferralIncomeCalculator() {
             <div className="space-y-6">
               <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
                 <h3 className="font-semibold text-green-800 mb-2">
-                  Ganancias Totales Proyectadas
+                  Ganancias Totales
                 </h3>
                 <div className="text-center mb-4">
                   <div className="text-3xl font-bold text-green-600 mb-2">
                     {formatCurrency(result.totalIncome)}
                   </div>
                   <div className="text-sm text-green-700">
-                    Para {referralInput.cycles} ciclo
-                    {referralInput.cycles !== 1 ? "s" : ""} con reinversión
+                    Para {input.count} referido{input.count !== 1 ? "s" : ""}
                   </div>
                 </div>
 
@@ -275,15 +183,13 @@ export default function ReferralIncomeCalculator() {
                   <div className="text-center p-3 bg-white rounded-lg">
                     <div className="text-green-600 font-medium">Comisión</div>
                     <div className="font-bold text-green-700">
-                      {result.commissionRate}%
+                      {commissionRate * 100}%
                     </div>
                   </div>
                   <div className="text-center p-3 bg-white rounded-lg">
-                    <div className="text-green-600 font-medium">
-                      Inversión Final
-                    </div>
+                    <div className="text-green-600 font-medium">Referidos</div>
                     <div className="font-bold text-purple-600">
-                      {formatCurrency(result.finalAmount)}
+                      {input.count}
                     </div>
                   </div>
                 </div>
@@ -291,86 +197,54 @@ export default function ReferralIncomeCalculator() {
 
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">
-                  Desglose por Ciclo (Crecimiento Exponencial)
+                  Desglose por Referido
                 </h4>
-
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {cycleDetails.map((detail) => (
-                    <div
-                      key={detail.cycle}
-                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-900">
-                          Ciclo {detail.cycle}
-                        </span>
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                          Inversión: {formatCurrency(detail.referralAmount)}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-gray-600">
-                            Ganancia referido:
-                          </span>
-                          <div className="font-medium">
-                            {formatCurrency(detail.referralEarnings)}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Tu ganancia:</span>
-                          <div className="font-medium text-green-600">
-                            {formatCurrency(detail.userEarnings)}
-                          </div>
+                {result.breakdown.map((item, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="font-medium text-gray-900">
+                        Referido {index + 1}
+                      </span>
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        Gen {item.generation}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Inversión:</span>
+                        <div className="font-medium">
+                          {formatCurrency(item.amount)}
                         </div>
                       </div>
-
-                      {detail.cycle < referralInput.cycles && (
-                        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500">
-                          Próximo ciclo:{" "}
-                          {formatCurrency(
-                            detail.referralAmount + detail.referralEarnings
-                          )}
+                      <div>
+                        <span className="text-gray-600">
+                          Ganancia referido:
+                        </span>
+                        <div className="font-medium">
+                          {formatCurrency(item.referralEarnings)}
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 bg-primary-50 rounded-lg border border-primary-200">
-                <h4 className="font-medium text-primary-800 mb-3">
-                  Proyecciones Equivalentes
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="text-center p-3 bg-white rounded-lg">
-                    <div className="text-primary-700">Equivalente mensual:</div>
-                    <div className="font-bold text-primary-600">
-                      {formatCurrency((result.totalIncome * 13) / 12)}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-gray-600">Tu ganancia:</span>
+                        <div className="font-medium text-green-600 text-lg">
+                          {formatCurrency(item.userIncome)}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center p-3 bg-white rounded-lg">
-                    <div className="text-primary-700">Equivalente anual:</div>
-                    <div className="font-bold text-primary-600">
-                      {formatCurrency(
-                        result.totalIncome * (13 / referralInput.cycles)
-                      )}
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-64 text-gray-500">
               <div className="text-center">
                 <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-gray-600">
-                  Configura los datos del referido
-                </p>
+                <p>Configura los datos del referido</p>
                 <p className="text-sm mt-1 text-gray-500">
-                  Selecciona generación, monto y ciclos para ver la proyección
-                  exponencial
+                  Selecciona generación, monto y cantidad para ver la proyección
                 </p>
               </div>
             </div>

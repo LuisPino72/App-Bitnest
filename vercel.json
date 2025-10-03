@@ -12,7 +12,7 @@
   },
   "headers": [
     {
-      "source": "/Logo.ico",
+      "source": "/(.*).ico",
       "headers": [
         {
           "key": "Cache-Control",
@@ -21,15 +21,6 @@
         {
           "key": "Content-Type",
           "value": "image/x-icon"
-        }
-      ]
-    },
-    {
-      "source": "/favicon.ico",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
         }
       ]
     }

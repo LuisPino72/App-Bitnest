@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLeads } from "@/hooks";
+import { useFirebaseLeads } from "@/hooks";
 import {
   Plus,
   Search,
@@ -14,12 +14,18 @@ import {
   Clock,
   Trash2,
   Users,
-  Calendar,
 } from "lucide-react";
 
-function LeadStats() {
-  const { getLeadsByStatus, leads } = useLeads();
+export default function LeadsPage() {
+  const { leads, addLead, updateLead, deleteLead, getLeadsByStatus, loading } =
+    useFirebaseLeads();
+  const [activeTab, setActiveTab] = useState<
+    "interested" | "doubtful" | "rejected"
+  >("interested");
+  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
+  // Estadísticas
   const stats = [
     {
       title: "Interesados",
@@ -51,31 +57,268 @@ function LeadStats() {
     },
   ];
 
+  // Tabs de navegación
+  const tabs = [
+    {
+      id: "interested" as const,
+      label: "Interesados",
+      icon: CheckCircle,
+      color: "text-green-600",
+    },
+    {
+      id: "doubtful" as const,
+      label: "En Duda",
+      icon: Clock,
+      color: "text-yellow-600",
+    },
+    {
+      id: "rejected" as const,
+      label: "Rechazados",
+      icon: XCircle,
+      color: "text-red-600",
+    },
+  ];
+
+  // Filtrado y utilidades
+  const currentLeads = getLeadsByStatus(activeTab);
+  const filteredLeads = currentLeads.filter(
+    (lead) =>
+      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "interested":
+        return "border-l-green-500 bg-green-50";
+      case "doubtful":
+        return "border-l-yellow-500 bg-yellow-50";
+      case "rejected":
+        return "border-l-red-500 bg-red-50";
+      default:
+        return "border-l-gray-500 bg-gray-50";
+    }
+  };
+
+  const handleDeleteLead = (leadId: string, leadName: string) => {
+    if (
+      confirm(
+        `¿Estás seguro de que quieres eliminar permanentemente a ${leadName}?`
+      )
+    ) {
+      deleteLead(leadId);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("es-ES");
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Gestión de Leads
+            </h1>
+            <p className="text-gray-600 mt-1">Cargando...</p>
+          </div>
+          <Button disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Lead
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="shadow-sm">
+              <CardContent className="p-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      {stats.map((stat, index) => (
-        <Card key={index} className="shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  {stat.title}
-                </p>
-                <p className="text-2xl font-bold text-gray-900">{stat.count}</p>
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Leads</h1>
+          <p className="text-gray-600 mt-1">
+            Administra y sigue tu pipeline de contactos
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Nuevo Lead
+        </Button>
+      </div>
+
+      {/* Estadísticas */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <Card key={index} className="shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    {stat.title}
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stat.count}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-full ${stat.bg}`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
               </div>
-              <div className={`p-3 rounded-full ${stat.bg}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Panel Principal */}
+      <Card className="shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Tabs */}
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              {tabs.map((tab) => {
+                const leadsCount = getLeadsByStatus(tab.id).length;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeTab === tab.id
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    <tab.icon className={`h-4 w-4 ${tab.color}`} />
+                    {tab.label}
+                    <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                      {leadsCount}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
-      ))}
+
+            {/* Búsqueda */}
+            <div className="relative w-full lg:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {filteredLeads.length > 0 ? (
+            <div className="grid gap-4">
+              {filteredLeads.map((lead) => (
+                <div
+                  key={lead.id}
+                  className={`border-l-4 rounded-lg p-4 transition-all hover:shadow-md ${getStatusColor(
+                    lead.status
+                  )}`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-gray-900 text-lg">
+                        {lead.name}
+                      </h3>
+                      <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
+                        {formatDate(lead.contactDate)}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteLead(lead.id, lead.name)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {lead.notes && (
+                    <div className="flex items-start gap-2 mb-4">
+                      <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-gray-600 text-sm">{lead.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 flex-wrap">
+                    {tabs
+                      .filter((tab) => tab.id !== lead.status)
+                      .map((tab) => (
+                        <Button
+                          key={tab.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updateLead(lead.id, { status: tab.id })
+                          }
+                          className="text-xs"
+                        >
+                          <tab.icon className={`h-3 w-3 mr-1 ${tab.color}`} />
+                          Mover a {tab.label}
+                        </Button>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <UserPlus className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500 text-lg font-medium">
+                {searchTerm
+                  ? "No se encontraron leads"
+                  : "No hay leads en esta categoría"}
+              </p>
+              <p className="text-gray-400 mt-1">
+                {searchTerm
+                  ? "Intenta con otros términos de búsqueda"
+                  : "Comienza agregando nuevos leads a tu pipeline"}
+              </p>
+              {!searchTerm && (
+                <Button onClick={() => setShowForm(true)} className="mt-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar Primer Lead
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Modal de Formulario */}
+      {showForm && <AddLeadForm onSuccess={() => setShowForm(false)} />}
     </div>
   );
 }
 
+// Componente de Formulario Integrado
 function AddLeadForm({ onSuccess }: { onSuccess: () => void }) {
-  const { addLead } = useLeads();
+  const { addLead } = useFirebaseLeads();
   const [formData, setFormData] = useState({
     name: "",
     status: "interested" as const,
@@ -172,214 +415,6 @@ function AddLeadForm({ onSuccess }: { onSuccess: () => void }) {
           </form>
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-export default function LeadsPage() {
-  const { getLeadsByStatus, updateLead, deleteLead } = useLeads();
-  const [activeTab, setActiveTab] = useState<
-    "interested" | "doubtful" | "rejected"
-  >("interested");
-  const [showForm, setShowForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const tabs = [
-    {
-      id: "interested" as const,
-      label: "Interesados",
-      icon: CheckCircle,
-      color: "text-green-600",
-    },
-    {
-      id: "doubtful" as const,
-      label: "En Duda",
-      icon: Clock,
-      color: "text-yellow-600",
-    },
-    {
-      id: "rejected" as const,
-      label: "Rechazados",
-      icon: XCircle,
-      color: "text-red-600",
-    },
-  ];
-
-  const currentLeads = getLeadsByStatus(activeTab);
-  const filteredLeads = currentLeads.filter(
-    (lead) =>
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "interested":
-        return "border-l-green-500 bg-green-50";
-      case "doubtful":
-        return "border-l-yellow-500 bg-yellow-50";
-      case "rejected":
-        return "border-l-red-500 bg-red-50";
-      default:
-        return "border-l-gray-500 bg-gray-50";
-    }
-  };
-
-  const handleDeleteLead = (leadId: string, leadName: string) => {
-    if (
-      confirm(
-        `¿Estás seguro de que quieres eliminar permanentemente a ${leadName}?`
-      )
-    ) {
-      deleteLead(leadId);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES");
-  };
-
-  return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Leads</h1>
-          <p className="text-gray-600 mt-1">
-            Administra y sigue tu pipeline de contactos
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nuevo Lead
-        </Button>
-      </div>
-
-      <LeadStats />
-
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-              {tabs.map((tab) => {
-                const leadsCount = getLeadsByStatus(tab.id).length;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    <tab.icon className={`h-4 w-4 ${tab.color}`} />
-                    {tab.label}
-                    <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                      {leadsCount}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="relative w-full lg:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar leads..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {filteredLeads.length > 0 ? (
-            <div className="grid gap-4">
-              {filteredLeads.map((lead) => (
-                <div
-                  key={lead.id}
-                  className={`border-l-4 rounded-lg p-4 transition-all hover:shadow-md ${getStatusColor(
-                    lead.status
-                  )}`}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-gray-900 text-lg">
-                        {lead.name}
-                      </h3>
-                      <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
-                        {formatDate(lead.contactDate)}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteLead(lead.id, lead.name)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {lead.notes && (
-                    <div className="flex items-start gap-2 mb-4">
-                      <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-gray-600 text-sm">{lead.notes}</p>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 flex-wrap">
-                    {tabs
-                      .filter((tab) => tab.id !== lead.status)
-                      .map((tab) => (
-                        <Button
-                          key={tab.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            updateLead(lead.id, { status: tab.id })
-                          }
-                          className="text-xs"
-                        >
-                          <tab.icon className={`h-3 w-3 mr-1 ${tab.color}`} />
-                          Mover a {tab.label}
-                        </Button>
-                      ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <UserPlus className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg font-medium">
-                {searchTerm
-                  ? "No se encontraron leads"
-                  : "No hay leads en esta categoría"}
-              </p>
-              <p className="text-gray-400 mt-1">
-                {searchTerm
-                  ? "Intenta con otros términos de búsqueda"
-                  : "Comienza agregando nuevos leads a tu pipeline"}
-              </p>
-              {!searchTerm && (
-                <Button onClick={() => setShowForm(true)} className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar Primer Lead
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {showForm && <AddLeadForm onSuccess={() => setShowForm(false)} />}
     </div>
   );
 }

@@ -1,20 +1,26 @@
+// ==================== TIPOS BASE ====================
+export type LeadStatus = "interested" | "doubtful" | "rejected";
+export type ReferralStatus = "active" | "completed" | "expired";
+export type Generation = 1 | 2;
+
+// ==================== INTERFACES PRINCIPALES ====================
 export interface Referral {
   id: string;
   name: string;
-  phone?: string;
   wallet: string;
-  generation: 1 | 2;
+  generation: Generation;
   amount: number;
   cycle: number;
   investmentDate: string;
   startDate: string;
   expirationDate: string;
-  status: "active" | "completed" | "expired";
+  status: ReferralStatus;
   referredBy?: string;
   earnings: number;
   userIncome: number;
   cycleCount: number;
   totalEarned: number;
+  phone?: string; 
 }
 
 export interface PersonalInvestment {
@@ -22,7 +28,7 @@ export interface PersonalInvestment {
   amount: number;
   startDate: string;
   expirationDate: string;
-  status: "active" | "completed" | "expired";
+  status: ReferralStatus; 
   earnings: number;
   cycleCount: number;
   totalEarned: number;
@@ -31,13 +37,14 @@ export interface PersonalInvestment {
 export interface Lead {
   id: string;
   name: string;
-  phone?: string;
-  status: "interested" | "doubtful" | "rejected";
-  notes?: string;
+  status: LeadStatus; 
   contactDate: string;
+  notes?: string;
+  phone?: string;
   lastContact?: string;
 }
 
+// ==================== DASHBOARD ====================
 export interface DashboardMetrics {
   totalInvestments: number;
   totalReferrals: number;
@@ -47,6 +54,13 @@ export interface DashboardMetrics {
   monthlyEarnings: number;
   expiringToday: number;
   activeLeads: number;
+}
+
+// ==================== CALCULADORAS OPTIMIZADAS ====================
+interface CalculatorBreakdown {
+  cycle: number;
+  earnings: number;
+  total: number;
 }
 
 export interface CalculatorInput {
@@ -59,40 +73,25 @@ export interface CalculatorResult {
   totalEarnings: number;
   finalAmount: number;
   cycles: number;
-  breakdown: {
-    cycle: number;
-    earnings: number;
-    total: number;
-  }[];
+  breakdown: CalculatorBreakdown[];
+}
+
+interface ReferralInputItem {
+  generation: Generation;
+  amount: number;
+  count: number;
+}
+
+interface ReferralBreakdownItem extends ReferralInputItem {
+  referralEarnings: number;
+  userIncome: number;
 }
 
 export interface ReferralCalculatorInput {
-  referrals: {
-    generation: 1 | 2;
-    amount: number;
-    count: number;
-  }[];
+  referrals: ReferralInputItem[];
 }
 
 export interface ReferralCalculatorResult {
   totalIncome: number;
-  breakdown: {
-    generation: 1 | 2;
-    amount: number;
-    count: number;
-    referralEarnings: number;
-    userIncome: number;
-  }[];
+  breakdown: ReferralBreakdownItem[];
 }
-
-export const BUSINESS_CONSTANTS = {
-  REFERRAL_EARNINGS_RATE: 0.24,
-  USER_COMMISSION_RATE: 0.2,
-  CYCLE_DAYS: 28,
-  FIRST_GEN_COMMISSION: 0.2,
-  SECOND_GEN_COMMISSION: 0.1,
-} as const;
-
-export type LeadStatus = "interested" | "doubtful" | "rejected";
-export type ReferralStatus = "active" | "completed" | "expired";
-export type Generation = 1 | 2;

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardMetrics } from "@/hooks";
+import { useDashboardMetrics } from "@/hooks/useFirebaseData";
 import { formatCurrency } from "@/lib/businessUtils";
 import { Calendar, TrendingUp, Target } from "lucide-react";
 
@@ -16,7 +16,9 @@ export function ProjectionCards() {
     {
       period: "3 Meses",
       income: currentMonthlyIncome * Math.pow(1 + averageGrowthRate, 3),
-      referrals: totalReferrals * 1.3,
+      referrals: Math.round(
+        totalReferrals * Math.pow(1 + averageGrowthRate, 3)
+      ),
       icon: Calendar,
       color: "text-blue-600",
       bg: "bg-blue-50",
@@ -25,7 +27,9 @@ export function ProjectionCards() {
     {
       period: "6 Meses",
       income: currentMonthlyIncome * Math.pow(1 + averageGrowthRate, 6),
-      referrals: totalReferrals * 1.7,
+      referrals: Math.round(
+        totalReferrals * Math.pow(1 + averageGrowthRate, 6)
+      ),
       icon: TrendingUp,
       color: "text-green-600",
       bg: "bg-green-50",
@@ -34,7 +38,9 @@ export function ProjectionCards() {
     {
       period: "1 Año",
       income: currentMonthlyIncome * Math.pow(1 + averageGrowthRate, 12),
-      referrals: totalReferrals * 2.5,
+      referrals: Math.round(
+        totalReferrals * Math.pow(1 + averageGrowthRate, 12)
+      ),
       icon: Target,
       color: "text-purple-600",
       bg: "bg-purple-50",
@@ -51,7 +57,7 @@ export function ProjectionCards() {
         {projections.map((projection, index) => (
           <Card
             key={index}
-            className={`${projection.bg} ${projection.border} border-l-4`}
+            className={`${projection.bg} ${projection.border} border-l-4 hover:shadow-md transition-shadow`}
           >
             <CardHeader className="pb-3">
               <CardTitle
@@ -72,7 +78,7 @@ export function ProjectionCards() {
                 <div>
                   <p className="text-sm text-gray-600">Referidos Estimados</p>
                   <p className="text-xl font-semibold text-gray-900">
-                    {Math.round(projection.referrals)} referidos
+                    {projection.referrals} referidos
                   </p>
                 </div>
                 <div className={`text-sm ${projection.color} font-medium`}>
@@ -88,6 +94,9 @@ export function ProjectionCards() {
           </Card>
         ))}
       </div>
+      <p className="text-xs text-gray-500 mt-3 text-center">
+        * Proyección basada en crecimiento mensual del 15%
+      </p>
     </div>
   );
 }

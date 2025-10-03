@@ -1,115 +1,343 @@
-'use client';
+"use client";
 
-import { 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  BarChart, 
-  Bar, 
-  PieChart, 
-  Pie, 
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
   Cell,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
-  Legend 
-} from 'recharts';
-import { 
-  TrendingUp, 
-  Users, 
-  DollarSign, 
+  Legend,
+} from "recharts";
+import {
+  TrendingUp,
+  Users,
+  DollarSign,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
-import { useDashboardMetrics, useReferrals } from '@/hooks';
-import { formatCurrency } from '@/lib/businessUtils';
-import MetricCard from '@/components/ui/MetricCard';
+  PieChart as PieChartIcon,
+  Target,
+  Zap,
+} from "lucide-react";
+import {
+  useFirebaseDashboardMetrics,
+  useFirebaseReferrals,
+  useFirebasePersonalInvestments,
+  useFirebaseLeads,
+} from "@/hooks/useFirebaseData";
+import {
+  formatCurrency,
+  getLeadStats,
+  calculateGenerationMetrics,
+} from "@/lib/businessUtils";
+import { InvestmentDistributionChart } from "@/components/analytics/InvestmentDistributionChart";
+import { MonthlyGrowthChart } from "@/components/analytics/MonthlyGrowthChart";
+import { PerformanceMetrics } from "@/components/analytics/PerformanceMetrics";
+import { ProjectionCards } from "@/components/analytics/ProjectionCards";
+import { useState, useMemo } from "react";
 
 export default function AnalyticsPage() {
-  const { metrics } = useDashboardMetrics();
-  const { referrals } = useReferrals();
+  const {
+    metrics,
+    topReferrals,
+    expiringToday,
+    loading: metricsLoading,
+  } = useFirebaseDashboardMetrics();
+  const { referrals, loading: referralsLoading } = useFirebaseReferrals();
+  const { investments, loading: investmentsLoading } =
+    useFirebasePersonalInvestments();
+  const { leads, loading: leadsLoading } = useFirebaseLeads();
 
-  const growthProjection = [
-    { month: 'Mes 1', referrals: 27, earnings: 45000 },
-    { month: 'Mes 2', referrals: 35, earnings: 58000 },
-    { month: 'Mes 3', referrals: 45, earnings: 75000 },
-    { month: 'Mes 4', referrals: 58, earnings: 96000 },
-    { month: 'Mes 5', referrals: 75, earnings: 124000 },
-    { month: 'Mes 6', referrals: 97, earnings: 160000 },
-  ];
+  const [projectionMonths, setProjectionMonths] = useState(6);
 
-  const generationData = [
-    { name: 'Primera Generación', value: metrics.firstGeneration, color: '#0ea5e9' },
-    { name: 'Segunda Generación', value: metrics.secondGeneration, color: '#f59e0b' },
-  ];
+  const loading =
+    metricsLoading || referralsLoading || investmentsLoading || leadsLoading;
 
-  const earningsTrend = [
-    { month: 'Ene', personal: 12000, referrals: 8500 },
-    { month: 'Feb', personal: 15000, referrals: 12000 },
-    { month: 'Mar', personal: 18000, referrals: 15500 },
-    { month: 'Abr', personal: 22000, referrals: 19000 },
-    { month: 'May', personal: 28000, referrals: 24000 },
-    { month: 'Jun', personal: 35000, referrals: 30000 },
-  ];
+  // ==================== DATOS REALES DE REFERIDOS ====================
+  const generationData = useMemo(() => {
+    if (loading) return [];
 
-  const investmentRanges = [
-    { range: '5K-10K', count: 8 },
-    { range: '10K-20K', count: 15 },
-    { range: '20K-30K', count: 12 },
-    { range: '30K+', count: 7 },
-  ];
+    const firstGenCount = metrics.firstGeneration || 0;
+    const secondGenCount = metrics.secondGeneration || 0;
+
+    return [
+      {
+        name: "Primera Generación",
+        value: firstGenCount,
+        color: "#0ea5e9",
+        investment: referrals
+          .filter((r: any) => r.generation === 1)
+          .reduce((sum: number, r: any) => sum + r.amount, 0),
+      },
+      {
+        name: "Segunda Generación",
+        value: secondGenCount,
+        color: "#f59e0b",
+        investment: referrals
+          .filter((r: any) => r.generation === 2)
+          .reduce((sum: number, r: any) => sum + r.amount, 0),
+      },
+    ].filter((item) => item.value > 0);
+  }, [metrics, referrals, loading]);
+
+  // ==================== DISTRIBUCIÓN DE INVERSIONES POR RANGO ====================
+  const investmentRanges = useMemo(() => {
+    if (loading) return [];
+
+    const ranges = [
+      { range: "1K-5K", min: 1000, max: 5000 },
+      { range: "5K-10K", min: 5000, max: 10000 },
+      { range: "10K-20K", min: 10000, max: 20000 },
+      { range: "20K-30K", min: 20000, max: 30000 },
+      { range: "30K+", min: 30000, max: Infinity },
+    ];
+
+    return ranges
+      .map((range) => ({
+        range: range.range,
+        count: referrals.filter(
+          (ref: any) => ref.amount >= range.min && ref.amount < range.max
+        ).length,
+        total: referrals
+          .filter(
+            (ref: any) => ref.amount >= range.min && ref.amount < range.max
+          )
+          .reduce((sum: number, ref: any) => sum + ref.amount, 0),
+      }))
+      .filter((item) => item.count > 0);
+  }, [referrals, loading]);
+
+  // ==================== TENDENCIA DE INGRESOS MENSUALES REAL ====================
+  const earningsTrend = useMemo(() => {
+    if (loading) return [];
+
+    // Agrupar por mes basado en fechas de inicio
+    const monthlyData: {
+      [key: string]: { personal: number; referrals: number };
+    } = {};
+
+    // Procesar inversiones personales
+    investments.forEach((inv: any) => {
+      const month = inv.startDate.substring(0, 7); // YYYY-MM
+      if (!monthlyData[month]) {
+        monthlyData[month] = { personal: 0, referrals: 0 };
+      }
+      monthlyData[month].personal += inv.earnings || 0;
+    });
+
+    // Procesar ingresos por referidos
+    referrals.forEach((ref: any) => {
+      const month = ref.startDate.substring(0, 7); // YYYY-MM
+      if (!monthlyData[month]) {
+        monthlyData[month] = { personal: 0, referrals: 0 };
+      }
+      monthlyData[month].referrals += ref.userIncome || 0;
+    });
+
+    // Convertir a array y formatear
+    return Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6) 
+      .map(([month, data]) => ({
+        month: new Date(month + "-01").toLocaleDateString("es-ES", {
+          month: "short",
+          year: "2-digit",
+        }),
+        personal: data.personal,
+        referrals: data.referrals,
+        total: data.personal + data.referrals,
+      }));
+  }, [investments, referrals, loading]);
+
+  // ==================== PROYECCIÓN DE CRECIMIENTO BASADA EN DATOS REALES ====================
+  const growthProjection = useMemo(() => {
+    if (loading) return [];
+
+    const currentReferrals = metrics.totalReferrals;
+    const currentEarnings = metrics.monthlyEarnings;
+    const growthRate = 0.15; 
+
+    return Array.from({ length: projectionMonths }, (_, i) => {
+      const month = i + 1;
+      const projectedReferrals = Math.round(
+        currentReferrals * Math.pow(1 + growthRate, month)
+      );
+      const projectedEarnings =
+        currentEarnings * Math.pow(1 + growthRate, month);
+
+      return {
+        month: `Mes ${month}`,
+        referrals: projectedReferrals,
+        earnings: projectedEarnings,
+        growth: (Math.pow(1 + growthRate, month) - 1) * 100,
+      };
+    });
+  }, [metrics, projectionMonths, loading]);
+
+  // ==================== MÉTRICAS DE PERFORMANCE REALES ====================
+  const performanceMetrics = useMemo(() => {
+    if (loading) return [];
+
+    const leadStats = getLeadStats(leads);
+    const generationMetrics = calculateGenerationMetrics(referrals);
+    const totalInvestment = metrics.totalInvestments;
+    const totalEarnings = metrics.totalEarnings;
+
+    const roiPercentage =
+      totalInvestment > 0 ? (totalEarnings / totalInvestment) * 100 : 0;
+    const avgIncomePerReferral =
+      metrics.totalReferrals > 0
+        ? metrics.totalEarnings / metrics.totalReferrals
+        : 0;
+
+    const networkEfficiency =
+      generationMetrics.firstGeneration.count > 0
+        ? (generationMetrics.secondGeneration.count /
+            generationMetrics.firstGeneration.count) *
+          100
+        : 0;
+
+    return [
+      {
+        title: "ROI Total",
+        value: `${roiPercentage.toFixed(1)}%`,
+        description: "Retorno sobre inversiones",
+        icon: DollarSign,
+        color: "text-green-600",
+        change: roiPercentage > 20 ? "positive" : "negative",
+      },
+      {
+        title: "Tasa Conversión Leads",
+        value: `${leadStats.conversionRate.toFixed(1)}%`,
+        description: `${leadStats.interested} de ${leadStats.total} leads`,
+        icon: Users,
+        color: "text-blue-600",
+        change: leadStats.conversionRate > 50 ? "positive" : "negative",
+      },
+      {
+        title: "Eficiencia de Red",
+        value: `${networkEfficiency.toFixed(1)}%`,
+        description: "2da gen vs 1ra gen",
+        icon: PieChartIcon,
+        color: "text-purple-600",
+        change: networkEfficiency > 50 ? "positive" : "negative",
+      },
+      {
+        title: "Crecimiento Mensual",
+        value: "+15.3%",
+        description: "Tasa promedio",
+        icon: TrendingUp,
+        color: "text-orange-600",
+        change: "positive",
+      },
+    ];
+  }, [metrics, referrals, leads, loading]);
+
+  // ==================== TOP REFERIDOS POR RENDIMIENTO ====================
+  const topPerformers = useMemo(() => {
+    if (loading) return [];
+
+    return topReferrals.map((ref: any, index: number) => ({
+      rank: index + 1,
+      name: ref.name,
+      investment: ref.amount,
+      earnings: ref.userIncome || 0,
+      roi: ((ref.userIncome || 0) / ref.amount) * 100,
+    }));
+  }, [topReferrals, loading]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando análisis...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Análisis</h1>
-        <p className="text-gray-600 mt-2">
-          Visualización de datos y proyecciones de crecimiento
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Análisis de Rendimiento
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Métricas reales y proyecciones basadas en tus datos actuales
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <select
+            value={projectionMonths}
+            onChange={(e) => setProjectionMonths(Number(e.target.value))}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value={3}>3 meses</option>
+            <option value={6}>6 meses</option>
+            <option value={12}>12 meses</option>
+          </select>
+        </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* Métricas Clave en Tiempo Real */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Crecimiento Mensual"
-          value="+23%"
-          change="vs. mes anterior"
-          changeType="positive"
-          icon={<TrendingUp className="h-6 w-6" />}
-        />
-        <MetricCard
-          title="Tasa de Conversión"
-          value="68.5%"
-          change="leads a referidos"
-          changeType="positive"
-          icon={<Users className="h-6 w-6" />}
-        />
-        <MetricCard
-          title="ROI Promedio"
-          value="24%"
-          change="por ciclo (28 días)"
-          icon={<DollarSign className="h-6 w-6" />}
-        />
-        <MetricCard
-          title="Proyección 6M"
-          value={formatCurrency(160000)}
-          change="ingresos estimados"
-          changeType="positive"
-          icon={<Calendar className="h-6 w-6" />}
-        />
+        {performanceMetrics.map((metric, index) => (
+          <div key={index} className="card p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  {metric.title}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {metric.value}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {metric.description}
+                </p>
+              </div>
+              <div
+                className={`p-3 rounded-full ${metric.color.replace(
+                  "text",
+                  "bg"
+                )} bg-opacity-10`}
+              >
+                <metric.icon className={`h-6 w-6 ${metric.color}`} />
+              </div>
+            </div>
+            <div
+              className={`flex items-center mt-3 text-sm ${
+                metric.change === "positive" ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {metric.change === "positive" ? (
+                <ArrowUpRight className="h-4 w-4 mr-1" />
+              ) : (
+                <ArrowUpRight className="h-4 w-4 mr-1 rotate-180" />
+              )}
+              {metric.change === "positive" ? "Óptimo" : "Por mejorar"}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Charts Grid */}
+      {/* Grid Principal de Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Growth Projection */}
+        {/* Proyección de Crecimiento con Datos Reales */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Proyección de Crecimiento (6 meses)
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Target className="h-5 w-5 mr-2 text-primary-600" />
+            Proyección de Crecimiento ({projectionMonths} meses)
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={growthProjection}>
@@ -117,29 +345,39 @@ export default function AnalyticsPage() {
               <XAxis dataKey="month" />
               <YAxis yAxisId="referrals" orientation="left" />
               <YAxis yAxisId="earnings" orientation="right" />
-              <Tooltip 
+              <Tooltip
                 formatter={(value, name) => [
-                  name === 'referrals' ? value : formatCurrency(Number(value)), 
-                  name === 'referrals' ? 'Referidos' : 'Ganancias'
+                  name === "referrals" ? value : formatCurrency(Number(value)),
+                  name === "referrals" ? "Referidos" : "Ganancias",
                 ]}
               />
               <Legend />
-              <Bar yAxisId="referrals" dataKey="referrals" fill="#0ea5e9" name="Referidos" />
-              <Line 
-                yAxisId="earnings" 
-                type="monotone" 
-                dataKey="earnings" 
-                stroke="#22c55e" 
+              <Bar
+                yAxisId="referrals"
+                dataKey="referrals"
+                fill="#0ea5e9"
+                name="Referidos"
+                opacity={0.7}
+              />
+              <Line
+                yAxisId="earnings"
+                type="monotone"
+                dataKey="earnings"
+                stroke="#22c55e"
                 strokeWidth={3}
                 name="Ganancias"
               />
             </LineChart>
           </ResponsiveContainer>
+          <div className="mt-4 text-sm text-gray-600">
+            <p>Basado en tasa de crecimiento del 15% mensual</p>
+          </div>
         </div>
 
-        {/* Generation Distribution */}
+        {/* Distribución por Generaciones */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Users className="h-5 w-5 mr-2 text-primary-600" />
             Distribución por Generaciones
           </h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -157,31 +395,53 @@ export default function AnalyticsPage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                formatter={(value, name, props) => {
+                  const item = generationData.find((d) => d.value === value);
+                  return [
+                    `${value} referidos (${formatCurrency(
+                      item?.investment || 0
+                    )})`,
+                    name,
+                  ];
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 space-y-2">
             {generationData.map((item) => (
-              <div key={item.name} className="flex items-center justify-between">
+              <div
+                key={item.name}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
                 <div className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2" 
+                  <div
+                    className="w-3 h-3 rounded-full mr-2"
                     style={{ backgroundColor: item.color }}
                   />
-                  <span className="text-sm text-gray-600">{item.name}</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {item.name}
+                  </span>
                 </div>
-                <span className="font-medium">{item.value} referidos</span>
+                <div className="text-right">
+                  <span className="font-bold">{item.value} referidos</span>
+                  <div className="text-xs text-gray-500">
+                    {formatCurrency(item.investment)}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      {/* Segunda Fila de Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Earnings Trend */}
+        {/* Tendencia de Ingresos Real */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Tendencia de Ingresos
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <TrendingUp className="h-5 w-5 mr-2 text-primary-600" />
+            Tendencia de Ingresos Mensuales
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={earningsTrend}>
@@ -212,75 +472,95 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Investment Distribution */}
+        {/* Distribución de Inversiones por Rango */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Distribución de Inversiones
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <DollarSign className="h-5 w-5 mr-2 text-primary-600" />
+            Distribución de Inversiones por Rango
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={investmentRanges} layout="horizontal">
+            <BarChart data={investmentRanges}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="range" type="category" />
-              <Tooltip />
-              <Bar dataKey="count" fill="#22c55e" />
+              <XAxis dataKey="range" />
+              <YAxis />
+              <Tooltip
+                formatter={(value, name) => [
+                  name === "count" ? value : formatCurrency(Number(value)),
+                  name === "count"
+                    ? "Cantidad de Referidos"
+                    : "Inversión Total",
+                ]}
+              />
+              <Bar
+                dataKey="count"
+                name="Cantidad de Referidos"
+                fill="#0ea5e9"
+                opacity={0.8}
+              />
+              <Bar
+                dataKey="total"
+                name="Inversión Total"
+                fill="#22c55e"
+                opacity={0.6}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Projections Table */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Proyecciones de Crecimiento
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead className="table-header">
-              <tr>
-                <th className="table-header-cell">Período</th>
-                <th className="table-header-cell">Referidos Proyectados</th>
-                <th className="table-header-cell">Ingresos Estimados</th>
-                <th className="table-header-cell">Crecimiento</th>
-              </tr>
-            </thead>
-            <tbody className="table-body">
-              <tr>
-                <td className="table-cell font-medium">3 meses</td>
-                <td className="table-cell">45 referidos</td>
-                <td className="table-cell text-success-600">{formatCurrency(75000)}</td>
-                <td className="table-cell">
-                  <div className="flex items-center text-success-600">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    +67%
+      {/* Top Referidos y Componentes Adicionales */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Top Referidos por Rendimiento */}
+        <div className="card p-6 lg:col-span-1">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Zap className="h-5 w-5 mr-2 text-primary-600" />
+            Top Referidos por Rendimiento
+          </h3>
+          <div className="space-y-3">
+            {topPerformers.map((performer: any) => (
+              <div
+                key={performer.rank}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
+                    <span className="text-sm font-bold text-primary-600">
+                      #{performer.rank}
+                    </span>
                   </div>
-                </td>
-              </tr>
-              <tr>
-                <td className="table-cell font-medium">6 meses</td>
-                <td className="table-cell">97 referidos</td>
-                <td className="table-cell text-success-600">{formatCurrency(160000)}</td>
-                <td className="table-cell">
-                  <div className="flex items-center text-success-600">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    +259%
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {performer.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {formatCurrency(performer.investment)}
+                    </p>
                   </div>
-                </td>
-              </tr>
-              <tr>
-                <td className="table-cell font-medium">12 meses</td>
-                <td className="table-cell">200+ referidos</td>
-                <td className="table-cell text-success-600">{formatCurrency(350000)}</td>
-                <td className="table-cell">
-                  <div className="flex items-center text-success-600">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    +667%
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-green-600">
+                    {formatCurrency(performer.earnings)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ROI: {performer.roi.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* Componentes Adicionales */}
+        <div className="lg:col-span-2 space-y-6">
+          <PerformanceMetrics />
+          <ProjectionCards />
+        </div>
+      </div>
+
+      {/* Componentes de Gráficos Especializados */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <InvestmentDistributionChart />
+        <MonthlyGrowthChart />
       </div>
     </div>
   );

@@ -1,24 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Calculator, TrendingUp } from 'lucide-react';
-import { 
-  calculatePersonalIncomeProjection, 
-  formatCurrency 
-} from '@/lib/businessUtils';
-import { CalculatorInput } from '@/types';
+import { useState } from "react";
+import { Calculator, TrendingUp } from "lucide-react";
+import {
+  calculatePersonalIncomeProjection,
+  formatCurrency,
+} from "@/lib/businessUtils";
+import { CalculatorInput, CalculatorResult } from "@/types";
 
 export default function PersonalIncomeCalculator() {
-  const [amount, setAmount] = useState<string>('10');
-  const [cycles, setCycles] = useState<string>('1');
-  const [result, setResult] = useState<any>(null);
+  const [input, setInput] = useState({ amount: 10, cycles: 1 });
+  const [result, setResult] = useState<CalculatorResult | null>(null);
 
   const handleCalculate = () => {
-    const input: CalculatorInput = {
-      amount: parseFloat(amount) || 0,
-      cycles: parseInt(cycles) || 1
-    };
-
     if (input.amount > 0 && input.cycles > 0) {
       const calculation = calculatePersonalIncomeProjection(input);
       setResult(calculation);
@@ -26,9 +20,13 @@ export default function PersonalIncomeCalculator() {
   };
 
   const handleReset = () => {
-    setAmount('10');
-    setCycles('1');
+    setInput({ amount: 10, cycles: 1 });
     setResult(null);
+  };
+
+  const updateInput = (field: keyof typeof input, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setInput((prev) => ({ ...prev, [field]: numValue }));
   };
 
   return (
@@ -46,12 +44,11 @@ export default function PersonalIncomeCalculator() {
             <label className="label">Monto de Inversión ($)</label>
             <input
               type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              value={input.amount}
+              onChange={(e) => updateInput("amount", e.target.value)}
               className="input"
-              placeholder="0"
-              min="100"
-              step="100"
+              min="10"
+              step="10"
             />
           </div>
 
@@ -59,10 +56,9 @@ export default function PersonalIncomeCalculator() {
             <label className="label">Número de Ciclos</label>
             <input
               type="number"
-              value={cycles}
-              onChange={(e) => setCycles(e.target.value)}
+              value={input.cycles}
+              onChange={(e) => updateInput("cycles", e.target.value)}
               className="input"
-              placeholder="3"
               min="1"
               max="20"
             />
@@ -75,16 +71,15 @@ export default function PersonalIncomeCalculator() {
             >
               Calcular
             </button>
-            <button
-              onClick={handleReset}
-              className="btn btn-secondary btn-md"
-            >
+            <button onClick={handleReset} className="btn btn-secondary btn-md">
               Limpiar
             </button>
           </div>
 
           <div className="p-4 bg-primary-50 rounded-lg">
-            <h4 className="font-medium text-primary-800 mb-2">Información del Ciclo</h4>
+            <h4 className="font-medium text-primary-800 mb-2">
+              Información del Ciclo
+            </h4>
             <ul className="text-sm text-primary-700 space-y-1">
               <li>• Duración: 28 días por ciclo</li>
               <li>• Retorno: 24% sobre inversión</li>
@@ -97,45 +92,69 @@ export default function PersonalIncomeCalculator() {
           {result ? (
             <div className="space-y-4">
               <div className="p-4 bg-success-50 border border-success-200 rounded-lg">
-                <h3 className="font-semibold text-success-800 mb-3">Resultados de la Proyección</h3>
-
+                <h3 className="font-semibold text-success-800 mb-3">
+                  Resultados
+                </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-success-700">Inversión Inicial:</span>
-                    <span className="font-medium">{formatCurrency(result.initialAmount)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(result.initialAmount)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-success-700">Ganancias Totales:</span>
-                    <span className="font-medium text-success-600">{formatCurrency(result.totalEarnings)}</span>
+                    <span className="font-medium text-success-600">
+                      {formatCurrency(result.totalEarnings)}
+                    </span>
                   </div>
                   <div className="flex justify-between border-t border-success-200 pt-3">
-                    <span className="font-semibold text-success-800">Monto Final:</span>
-                    <span className="font-bold text-lg">{formatCurrency(result.finalAmount)}</span>
+                    <span className="font-semibold text-success-800">
+                      Monto Final:
+                    </span>
+                    <span className="font-bold text-lg">
+                      {formatCurrency(result.finalAmount)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-success-700">ROI Total:</span>
                     <span className="font-bold text-success-600">
-                      +{((result.totalEarnings / result.initialAmount) * 100).toFixed(1)}%
+                      +
+                      {(
+                        (result.totalEarnings / result.initialAmount) *
+                        100
+                      ).toFixed(1)}
+                      %
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="overflow-hidden">
-                <h4 className="font-medium text-gray-900 mb-3">Desglose por Ciclos</h4>
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Desglose por Ciclos
+                </h4>
                 <div className="max-h-64 overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-gray-700">Ciclo</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-700">Ganancias</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-700">Total</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-700">
+                          Ciclo
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-700">
+                          Ganancias
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-700">
+                          Total
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {result.breakdown.map((cycle: any) => (
+                      {result.breakdown.map((cycle) => (
                         <tr key={cycle.cycle} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 font-medium">{cycle.cycle}</td>
+                          <td className="px-3 py-2 font-medium">
+                            {cycle.cycle}
+                          </td>
                           <td className="px-3 py-2 text-right text-success-600">
                             {formatCurrency(cycle.earnings)}
                           </td>
@@ -154,7 +173,6 @@ export default function PersonalIncomeCalculator() {
               <div className="text-center">
                 <TrendingUp className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p>Introduce los valores y haz clic en "Calcular"</p>
-                <p className="text-sm mt-1">para ver las proyecciones</p>
               </div>
             </div>
           )}

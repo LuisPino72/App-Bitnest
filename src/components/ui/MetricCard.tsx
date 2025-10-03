@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 interface MetricCardProps {
   title: string;
   value: string;
@@ -17,80 +19,70 @@ export default function MetricCard({
   compact = false,
   centered = false,
 }: MetricCardProps) {
-  const iconBgClass =
-    changeType === "positive"
-      ? "bg-success-100 text-success-600"
-      : changeType === "negative"
-      ? "bg-danger-100 text-danger-600"
-      : "bg-gray-100 text-gray-600";
+  const iconBgClass = cn("rounded-lg p-2", {
+    "bg-green-100 text-green-600": changeType === "positive",
+    "bg-red-100 text-red-600": changeType === "negative",
+    "bg-gray-100 text-gray-600": changeType === "neutral",
+  });
+
+  const changeTextClass = cn(compact ? "text-xs" : "text-sm", {
+    "text-green-600": changeType === "positive",
+    "text-red-600": changeType === "negative",
+    "text-gray-600": changeType === "neutral",
+  });
 
   if (centered) {
     return (
       <div
-        className={`card ${
-          compact ? "p-4" : "p-6"
-        } flex flex-col justify-center items-center text-center h-full`}
+        className={cn(
+          "rounded-xl border bg-white shadow-sm p-6 flex flex-col justify-center items-center text-center h-full",
+          compact && "p-4"
+        )}
       >
-        <div className={`rounded-lg p-2 mb-3 ${iconBgClass}`}>{icon}</div>
+        <div className={iconBgClass}>{icon}</div>
         <p
-          className={`text-gray-600 ${
+          className={cn(
+            "text-gray-600 font-medium mt-3",
             compact ? "text-sm" : "text-base"
-          } font-medium`}
+          )}
         >
           {title}
         </p>
         <p
-          className={`font-bold text-gray-900 ${
+          className={cn(
+            "font-bold text-gray-900 mt-1",
             compact ? "text-xl" : "text-2xl"
-          } mt-1`}
+          )}
         >
           {value}
         </p>
-        {change && (
-          <p
-            className={`mt-1 ${
-              changeType === "positive"
-                ? "text-success-600"
-                : changeType === "negative"
-                ? "text-danger-600"
-                : "text-gray-600"
-            } ${compact ? "text-xs" : "text-sm"}`}
-          >
-            {change}
-          </p>
-        )}
+        {change && <p className={cn("mt-1", changeTextClass)}>{change}</p>}
       </div>
     );
   }
 
   return (
-    <div className={`card ${compact ? "p-4" : "p-6"}`}>
-      <div className={`flex items-center ${compact ? "mb-2" : "mb-4"}`}>
-        <div className={`rounded-lg p-2 ${iconBgClass}`}>{icon}</div>
+    <div
+      className={cn(
+        "rounded-xl border bg-white shadow-sm p-6",
+        compact && "p-4"
+      )}
+    >
+      <div className="flex items-center">
+        <div className={iconBgClass}>{icon}</div>
         <div className="ml-3 flex-1">
-          <p className={`text-gray-600 ${compact ? "text-sm" : "text-base"}`}>
+          <p className={cn("text-gray-600", compact ? "text-sm" : "text-base")}>
             {title}
           </p>
           <p
-            className={`font-bold text-gray-900 ${
+            className={cn(
+              "font-bold text-gray-900",
               compact ? "text-xl" : "text-2xl"
-            }`}
+            )}
           >
             {value}
           </p>
-          {change && (
-            <p
-              className={`${
-                changeType === "positive"
-                  ? "text-success-600"
-                  : changeType === "negative"
-                  ? "text-danger-600"
-                  : "text-gray-600"
-              } ${compact ? "text-xs" : "text-sm"}`}
-            >
-              {change}
-            </p>
-          )}
+          {change && <p className={changeTextClass}>{change}</p>}
         </div>
       </div>
     </div>

@@ -1,30 +1,20 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Users,
-  X,
-  RefreshCw,
-  CheckCircle,
-  DollarSign,
-  TrendingUp,
-} from "lucide-react";
-import { useReferrals, useSearch, usePagination } from "@/hooks";
+import { useState, useCallback, useMemo } from "react";
+import { Plus, Search, Edit, Trash2, Users, X, RefreshCw } from "lucide-react";
+import { useFirebaseReferrals } from "@/hooks";
 import {
   formatCurrency,
   formatDate,
   getActiveReferralPersons,
 } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
-import { Toast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ReferralsPage() {
-  const { referrals, addReferral, updateReferral, deleteReferral } =
-    useReferrals();
+  const { referrals, addReferral, updateReferral, deleteReferral, loading } =
+    useFirebaseReferrals();
 
   const [filterGeneration, setFilterGeneration] = useState<"all" | "1" | "2">(
     "all"
@@ -34,39 +24,63 @@ export default function ReferralsPage() {
   >("all");
   const [showForm, setShowForm] = useState(false);
   const [editingReferral, setEditingReferral] = useState<string | null>(null);
-  const [cycleModalReferral, setCycleModalReferral] = useState<null | string>(
+  const [cycleModalReferral, setCycleModalReferral] = useState<string | null>(
     null
   );
   const [cycleActionLoading, setCycleActionLoading] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type?: "success" | "error";
-  } | null>(null);
-  const toastTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const showToast = useCallback(
-    (message: string, type: "success" | "error" = "success") => {
-      setToast({ message, type });
-      if (toastTimeout.current) clearTimeout(toastTimeout.current);
-      toastTimeout.current = setTimeout(() => setToast(null), 2500);
-    },
-    []
+  // Estadísticas
+  const activeReferralPersons = useMemo(
+    () => getActiveReferralPersons(referrals),
+    [referrals]
   );
+  const firstGenActive = activeReferralPersons.filter(
+    (r) => r.generation === 1
+  ).length;
+  const secondGenActive = activeReferralPersons.filter(
+    (r) => r.generation === 2
+  ).length;
+  const totalUniqueReferrals = new Set(referrals.map((r) => r.wallet)).size;
 
+  // Filtrado
+  const filteredReferrals = useMemo(() => {
+    return referrals
+      .filter((referral) => {
+        const generationMatch =
+          filterGeneration === "all" ||
+          referral.generation.toString() === filterGeneration;
+        const statusMatch =
+          filterStatus === "all" || referral.status === filterStatus;
+        const searchMatch =
+          referral.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          referral.wallet.toLowerCase().includes(searchTerm.toLowerCase());
+
+        return generationMatch && statusMatch && searchMatch;
+      })
+      .sort((a, b) => {
+        if (a.status === "completed" && b.status !== "completed") return 1;
+        if (a.status !== "completed" && b.status === "completed") return -1;
+        return (
+          new Date(a.expirationDate).getTime() -
+          new Date(b.expirationDate).getTime()
+        );
+      });
+  }, [referrals, filterGeneration, filterStatus, searchTerm]);
+
+  // Handlers
   const handleFinishCycle = async (referralId: string) => {
     setCycleActionLoading(true);
-    const referral = referrals.find((r) => r.id === referralId);
-    if (!referral) return;
     await updateReferral(referralId, { status: "completed" });
     setCycleActionLoading(false);
     setCycleModalReferral(null);
-    showToast("Ciclo finalizado. El referido ha sido marcado como inactivo.");
   };
 
   const handleReinvestCycle = async (referralId: string) => {
     setCycleActionLoading(true);
     const referral = referrals.find((r) => r.id === referralId);
     if (!referral) return;
+
     const newCycle = referral.cycle + 1;
     const newAmount = parseFloat(
       (referral.amount + referral.earnings).toFixed(2)
@@ -75,389 +89,248 @@ export default function ReferralsPage() {
     const newUserIncome = parseFloat(
       (newEarnings * (referral.generation === 1 ? 0.2 : 0.1)).toFixed(2)
     );
+
     const today = new Date().toISOString().split("T")[0];
-    const expirationDate = (() => {
-      const d = new Date(today);
-      d.setDate(d.getDate() + 28);
-      return d.toISOString().split("T")[0];
-    })();
-    const totalEarned = parseFloat(
-      (referral.totalEarned + newEarnings + newUserIncome).toFixed(2)
-    );
+    const expirationDate = new Date(today);
+    expirationDate.setDate(expirationDate.getDate() + 28);
+
     await updateReferral(referralId, {
       amount: newAmount,
       cycle: newCycle,
       investmentDate: today,
-      expirationDate,
+      expirationDate: expirationDate.toISOString().split("T")[0],
       earnings: newEarnings,
       userIncome: newUserIncome,
-      totalEarned,
+      totalEarned: parseFloat(
+        (referral.totalEarned + newEarnings + newUserIncome).toFixed(2)
+      ),
       status: "active",
       startDate: today,
       cycleCount: newCycle,
     });
+
     setCycleActionLoading(false);
     setCycleModalReferral(null);
-    showToast("Reinversión exitosa. El ciclo ha sido actualizado.");
   };
 
-  const filteredReferrals = referrals
-    .filter((referral) => {
-      const generationMatch =
-        filterGeneration === "all" ||
-        referral.generation.toString() === filterGeneration;
-      const statusMatch =
-        filterStatus === "all" || referral.status === filterStatus;
-      return generationMatch && statusMatch;
-    })
-    .sort((a, b) => {
-      if (a.status === "completed" && b.status !== "completed") {
-        return 1;
-      }
-      if (a.status !== "completed" && b.status === "completed") {
-        return -1;
-      }
-
-      return (
-        new Date(a.expirationDate).getTime() -
-        new Date(b.expirationDate).getTime()
-      );
-    });
-
-  const { searchTerm, setSearchTerm, filteredItems } =
-    useSearch(filteredReferrals);
-  const {
-    currentPage,
-    totalPages,
-    currentItems,
-    nextPage,
-    previousPage,
-    goToPage,
-  } = usePagination(filteredItems, 10);
-
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("¿Estás seguro de que quieres eliminar este referido?")) {
-      deleteReferral(id);
-      showToast("Referido eliminado exitosamente", "success");
+      await deleteReferral(id);
     }
   };
 
-  const handleAddReferralSuccess = (msg?: string) => {
-    setShowForm(false);
-    showToast(msg || "Referido agregado exitosamente!", "success");
-  };
-
-  const handleUpdateReferralSuccess = (msg?: string) => {
-    setEditingReferral(null);
-    showToast(msg || "Referido actualizado exitosamente", "success");
-  };
-
   const getStatusBadge = (status: string) => {
+    const baseClasses =
+      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium";
+
     switch (status) {
       case "active":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <span className={`${baseClasses} bg-green-100 text-green-800`}>
             Activo
           </span>
         );
       case "completed":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span className={`${baseClasses} bg-blue-100 text-blue-800`}>
             Completado
           </span>
         );
       case "expired":
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <span className={`${baseClasses} bg-red-100 text-red-800`}>
             Expirado
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
             {status}
           </span>
         );
     }
   };
 
-  const activeReferralPersons = getActiveReferralPersons(referrals);
-
-  const firstGenActive = activeReferralPersons.filter(
-    (r) => r.generation === 1
-  ).length;
-  const secondGenActive = activeReferralPersons.filter(
-    (r) => r.generation === 2
-  ).length;
-
-  const totalUniqueReferrals = new Set(referrals.map((r) => r.wallet)).size;
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Referidos</h1>
+            <p className="text-gray-600 mt-2">Cargando...</p>
+          </div>
+          <Button disabled>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva inversión
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Referidos</h1>
           <p className="text-gray-600 mt-2">
             Gestiona tu red de referidos y sus inversiones
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        >
+        <Button onClick={() => setShowForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nueva inversión
-        </button>
+        </Button>
       </div>
 
-      {/* Modal para Agregar Referido */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">
-                Agregar Nuevo Referido
-              </h2>
-              <button
-                onClick={() => setShowForm(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              <AddReferralForm
-                onSuccess={handleAddReferralSuccess}
-                onCancel={() => setShowForm(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Editar Referido */}
-      {editingReferral && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">
-                Editar Referido
-              </h2>
-              <button
-                onClick={() => setEditingReferral(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              <AddReferralForm
-                referral={
-                  referrals.find((r) => r.id === editingReferral) || null
-                }
-                onSuccess={handleUpdateReferralSuccess}
-                onCancel={() => setEditingReferral(null)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Finalizar Ciclo / Reinvertir */}
-      {cycleModalReferral && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-green-600" />
-                Finalizar Ciclo
-              </h2>
-              <button
-                onClick={() => setCycleModalReferral(null)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-gray-700 text-base mb-2">
-                ¿Qué deseas hacer con este referido?
-              </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => handleFinishCycle(cycleModalReferral)}
-                  disabled={cycleActionLoading}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  Finalizar ciclo
-                </button>
-                <button
-                  onClick={() => handleReinvestCycle(cycleModalReferral)}
-                  disabled={cycleActionLoading}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Reinvertir (crear nuevo ciclo)
-                </button>
-              </div>
-              <button
-                onClick={() => setCycleModalReferral(null)}
-                className="mt-4 w-full text-gray-600 hover:text-gray-900 text-sm underline"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ TARJETAS CORREGIDAS */}
+      {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-blue-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Total Referidos</p>
-              <p className="text-2xl font-bold">{totalUniqueReferrals}</p>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-blue-500" />
+              <div className="ml-3">
+                <p className="text-sm text-gray-600">Total Referidos</p>
+                <p className="text-2xl font-bold">{totalUniqueReferrals}</p>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-green-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Primera Gen.</p>
-              <p className="text-2xl font-bold">{firstGenActive}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-green-500" />
+              <div className="ml-3">
+                <p className="text-sm text-gray-600">Primera Gen.</p>
+                <p className="text-2xl font-bold">{firstGenActive}</p>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-yellow-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Segunda Gen.</p>
-              <p className="text-2xl font-bold">{secondGenActive}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-yellow-500" />
+              <div className="ml-3">
+                <p className="text-sm text-gray-600">Segunda Gen.</p>
+                <p className="text-2xl font-bold">{secondGenActive}</p>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-red-500" />
-            <div className="ml-3">
-              <p className="text-sm text-gray-600">Activos</p>
-              <p className="text-2xl font-bold">
-                {activeReferralPersons.length}
-              </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-red-500" />
+              <div className="ml-3">
+                <p className="text-sm text-gray-600">Activos</p>
+                <p className="text-2xl font-bold">
+                  {activeReferralPersons.length}
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 max-w-md">
-            {" "}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre o billetera"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-              />
+      {/* Filtros y Búsqueda */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o billetera"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 flex-1 justify-end">
+              <select
+                value={filterGeneration}
+                onChange={(e) => setFilterGeneration(e.target.value as any)}
+                className="block w-full max-w-xs pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Todas las generaciones</option>
+                <option value="1">Primera generación</option>
+                <option value="2">Segunda generación</option>
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="block w-full max-w-xs pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="active">Activo</option>
+                <option value="completed">Completado</option>
+                <option value="expired">Expirado</option>
+              </select>
             </div>
           </div>
-          <div className="flex gap-3 flex-1 justify-end">
-            {" "}
-            <select
-              value={filterGeneration}
-              onChange={(e) => setFilterGeneration(e.target.value as any)}
-              className="block w-full max-w-xs pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-md"
-            >
-              <option value="all">Todas las generaciones</option>
-              <option value="1">Primera generación</option>
-              <option value="2">Segunda generación</option>
-            </select>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="block w-full max-w-xs pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 rounded-md"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="active">Activo</option>
-              <option value="completed">Completado</option>
-              <option value="expired">Expirado</option>
-            </select>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Tabla de Referidos */}
+      <Card>
         <div className="overflow-x-auto">
-          <table className="min-w-full table-auto divide-y divide-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32"
-                >
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Referido
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Generación
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Inversión
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Ganancias
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Tu Ingreso
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-24"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Estado
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Vencimiento
                 </th>
-                <th
-                  scope="col"
-                  className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20"
-                >
+                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                   Acciones
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentItems.map((referral) => (
+              {filteredReferrals.map((referral) => (
                 <tr key={referral.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 whitespace-nowrap w-32">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <div className="font-medium text-gray-900">
                       {referral.name}
                     </div>
+                    <div className="text-xs text-gray-500 truncate max-w-[120px]">
+                      {referral.wallet}
+                    </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-20">
+                  <td className="px-3 py-2 whitespace-nowrap text-center">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                         referral.generation === 1
@@ -468,44 +341,44 @@ export default function ReferralsPage() {
                       Gen {referral.generation}
                     </span>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-28 font-medium">
+                  <td className="px-3 py-2 whitespace-nowrap text-center font-medium">
                     {formatCurrency(referral.amount)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-28 text-green-600">
+                  <td className="px-3 py-2 whitespace-nowrap text-center text-green-600">
                     {formatCurrency(referral.earnings)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-28 font-medium text-blue-600">
+                  <td className="px-3 py-2 whitespace-nowrap text-center font-medium text-blue-600">
                     {formatCurrency(referral.userIncome)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-24">
+                  <td className="px-3 py-2 whitespace-nowrap text-center">
                     {getStatusBadge(referral.status)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-28">
+                  <td className="px-3 py-2 whitespace-nowrap text-center">
                     {formatDate(referral.expirationDate)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center w-20">
+                  <td className="px-3 py-2 whitespace-nowrap text-center">
                     <div className="flex justify-center gap-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setEditingReferral(referral.id)}
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
-                        title="Editar"
                       >
                         <Edit className="h-4 w-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setCycleModalReferral(referral.id)}
-                        className="text-green-600 hover:text-green-900 transition-colors"
-                        title="Finalizar Ciclo / Reinvertir"
                       >
                         <RefreshCw className="h-4 w-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(referral.id)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
-                        title="Eliminar"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -514,50 +387,112 @@ export default function ReferralsPage() {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200">
-            <div className="text-sm text-gray-700">
-              Página {currentPage} de {totalPages} • {filteredItems.length}{" "}
-              resultados
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={previousPage}
-                disabled={currentPage === 1}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
-            </div>
+        {filteredReferrals.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500 text-lg">No se encontraron referidos</p>
+            <p className="text-gray-400 mt-1">
+              {searchTerm
+                ? "Intenta con otros términos de búsqueda"
+                : "Comienza agregando tu primer referido"}
+            </p>
           </div>
         )}
-      </div>
+      </Card>
 
-      {filteredItems.length === 0 && (
-        <div className="text-center py-12">
-          <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500 text-lg">No se encontraron referidos</p>
-          <p className="text-gray-400 mt-1">
-            {searchTerm
-              ? "Intenta con otros términos de búsqueda"
-              : "Comienza agregando tu primer referido"}
-          </p>
+      {/* Modales */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Agregar Nuevo Referido
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowForm(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <AddReferralForm
+                onSuccess={() => setShowForm(false)}
+                onCancel={() => setShowForm(false)}
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+      {editingReferral && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Editar Referido
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingReferral(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-6">
+              <AddReferralForm
+                referral={
+                  referrals.find((r) => r.id === editingReferral) || null
+                }
+                onSuccess={() => setEditingReferral(null)}
+                onCancel={() => setEditingReferral(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cycleModalReferral && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Finalizar Ciclo
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCycleModalReferral(null)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700">
+                ¿Qué deseas hacer con este referido?
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => handleFinishCycle(cycleModalReferral)}
+                  disabled={cycleActionLoading}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Finalizar ciclo
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleReinvestCycle(cycleModalReferral)}
+                  disabled={cycleActionLoading}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reinvertir
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

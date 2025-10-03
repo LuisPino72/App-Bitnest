@@ -1,25 +1,38 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardMetrics } from "@/hooks";
+import { Card, CardContent } from "@/components/ui/card";
+import { useDashboardMetrics } from "@/hooks/useFirebaseData";
+import { useFirebaseLeads } from "@/hooks/useFirebaseData";
 import { formatCurrency } from "@/lib/businessUtils";
 import { Zap, DollarSign, Users, Percent } from "lucide-react";
 
 export function PerformanceMetrics() {
   const { metrics } = useDashboardMetrics();
+  const { leads } = useFirebaseLeads();
 
+  // Cálculos reales basados en datos actuales
   const totalReferrals = metrics.totalReferrals;
   const totalInvestment = metrics.totalInvestments;
   const totalMyIncome = metrics.totalEarnings;
+
   const avgIncomePerReferral =
     totalReferrals > 0 ? totalMyIncome / totalReferrals : 0;
   const roiPercentage =
     totalInvestment > 0 ? (totalMyIncome / totalInvestment) * 100 : 0;
 
+  // Calcular eficiencia de red con datos reales
   const firstGenCount = metrics.firstGeneration || 0;
   const secondGenCount = metrics.secondGeneration || 0;
   const networkEfficiency =
     firstGenCount > 0 ? (secondGenCount / firstGenCount) * 100 : 0;
+
+  // Calcular tasa de conversión real de leads
+  const interestedLeads = leads.filter(
+    (lead) => lead.status === "interested"
+  ).length;
+  const totalLeads = leads.length;
+  const conversionRate =
+    totalLeads > 0 ? (interestedLeads / totalLeads) * 100 : 0;
 
   const performanceData = [
     {
@@ -47,9 +60,9 @@ export function PerformanceMetrics() {
       bg: "bg-purple-50",
     },
     {
-      title: "Tasa de Crecimiento",
-      value: "+15.3%",
-      description: "Promedio mensual",
+      title: "Tasa Conversión Leads",
+      value: `${conversionRate.toFixed(1)}%`,
+      description: `${interestedLeads} de ${totalLeads} leads`,
       icon: Zap,
       color: "text-orange-600",
       bg: "bg-orange-50",

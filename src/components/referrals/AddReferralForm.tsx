@@ -1,42 +1,41 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useReferrals } from "@/hooks";
+import { useFirebaseReferrals } from "@/hooks";
 import type { Referral } from "@/types";
 import {
   calculateReferralEarnings,
   calculateUserIncome,
   calculateExpirationDate,
-  BUSINESS_CONSTANTS,
+  formatCurrency,
 } from "@/lib/businessUtils";
-import { UserPlus, Calculator, X } from "lucide-react";
+import { UserPlus, Calculator } from "lucide-react";
+import { BUSINESS_CONSTANTS } from "@/types/constants";
 
 interface AddReferralFormProps {
-  onSuccess?: (msg?: string) => void;
+  onSuccess?: () => void;
   onCancel?: () => void;
   referral?: Referral | null;
-  onUpdate?: (id: string, data: Partial<Referral>) => void;
 }
 
 export function AddReferralForm({
   onSuccess,
   onCancel,
   referral,
-  onUpdate,
 }: AddReferralFormProps) {
-  const { addReferral, updateReferral, referrals } = useReferrals();
+  const { addReferral, updateReferral } = useFirebaseReferrals();
   const isEdit = !!referral;
 
   const [formData, setFormData] = useState({
-    name: referral?.name || "",
-    wallet: referral?.wallet || "",
-    amount: referral ? referral.amount.toString() : "",
-    cycle: referral ? referral.cycle?.toString() || "1" : "1",
-    generation: referral ? referral.generation.toString() : "1",
-    investmentDate: referral?.investmentDate || "",
-    expirationDate: referral?.expirationDate || "",
+    name: "",
+    wallet: "",
+    amount: "",
+    cycle: "1",
+    generation: "1",
+    investmentDate: "",
+    expirationDate: "",
   });
 
   const [calculations, setCalculations] = useState({
@@ -45,48 +44,7 @@ export function AddReferralForm({
     totalEarned: 0,
   });
 
-  // 🔍 Autocompletado
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filteredReferrals, setFilteredReferrals] = useState<Referral[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-
-  // Filtrar referidos activos al escribir
-  useEffect(() => {
-    if (!isEdit && formData.name.trim() !== "") {
-      const term = formData.name.toLowerCase();
-      const activeReferrals = referrals.filter((r) => r.status === "active");
-      const matches = activeReferrals.filter(
-        (r) =>
-          r.name.toLowerCase().includes(term) ||
-          r.wallet.toLowerCase().includes(term)
-      );
-      setFilteredReferrals(matches);
-      setShowSuggestions(matches.length > 0);
-    } else {
-      setShowSuggestions(false);
-      setFilteredReferrals([]);
-    }
-  }, [formData.name, referrals, isEdit]);
-
-  // Cerrar sugerencias al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        inputRef.current &&
-        suggestionsRef.current &&
-        !inputRef.current.contains(e.target as Node) &&
-        !suggestionsRef.current.contains(e.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Resto de useEffects y handlers existentes...
+  // Iniciar formulario
   useEffect(() => {
     if (referral) {
       setFormData({
@@ -98,22 +56,8 @@ export function AddReferralForm({
         investmentDate: referral.investmentDate,
         expirationDate: referral.expirationDate,
       });
-      const numAmount = referral.amount;
-      const referralEarnings = calculateReferralEarnings(numAmount);
-      const myIncome = calculateUserIncome(
-        referralEarnings,
-        referral.generation
-      );
-      setCalculations({
-        referralEarnings,
-        myIncome,
-        totalEarned: referralEarnings + myIncome,
-      });
-    }
-  }, [referral]);
-
-  useEffect(() => {
-    if (!isEdit) {
+      updateCalculations(referral.amount, referral.generation);
+    } else {
       const today = new Date().toISOString().split("T")[0];
       setFormData((prev) => ({
         ...prev,
@@ -121,123 +65,79 @@ export function AddReferralForm({
         expirationDate: calculateExpirationDate(today),
       }));
     }
-  }, [isEdit]);
+  }, [referral]);
 
-  const handleAmountChange = (amount: string) => {
-    const numAmount = parseFloat(amount) || 0;
-    const referralEarnings = calculateReferralEarnings(numAmount);
-    const myIncome = calculateUserIncome(
-      referralEarnings,
-      parseInt(formData.generation) as 1 | 2
-    );
+  const updateCalculations = (amount: number, generation: 1 | 2) => {
+    const referralEarnings = calculateReferralEarnings(amount);
+    const myIncome = calculateUserIncome(referralEarnings, generation);
     setCalculations({
       referralEarnings,
       myIncome,
       totalEarned: referralEarnings + myIncome,
     });
-    setFormData((prev) => ({ ...prev, amount }));
   };
 
-  const handleInvestmentDateChange = (date: string) => {
-    const expirationDate = calculateExpirationDate(date);
-    setFormData((prev) => ({
-      ...prev,
-      investmentDate: date,
-      expirationDate,
-    }));
+  const handleAmountChange = (amount: string) => {
+    const numAmount = parseFloat(amount) || 0;
+    setFormData((prev) => ({ ...prev, amount }));
+    updateCalculations(numAmount, parseInt(formData.generation) as 1 | 2);
   };
 
   const handleGenerationChange = (generation: string) => {
     setFormData((prev) => ({ ...prev, generation }));
     if (formData.amount) {
-      const numAmount = parseFloat(formData.amount) || 0;
-      const referralEarnings = calculateReferralEarnings(numAmount);
-      const myIncome = calculateUserIncome(
-        referralEarnings,
+      updateCalculations(
+        parseFloat(formData.amount),
         parseInt(generation) as 1 | 2
       );
-      setCalculations({
-        referralEarnings,
-        myIncome,
-        totalEarned: referralEarnings + myIncome,
-      });
     }
   };
 
-  const handleSelectReferral = (ref: Referral) => {
-    setFormData((prev) => ({
-      ...prev,
-      name: ref.name,
-      wallet: ref.wallet,
-    }));
-    setShowSuggestions(false);
+  const handleInvestmentDateChange = (date: string) => {
+    const expirationDate = calculateExpirationDate(date);
+    setFormData((prev) => ({ ...prev, investmentDate: date, expirationDate }));
   };
 
-  const clearName = () => {
-    setFormData((prev) => ({ ...prev, name: "" }));
-    setShowSuggestions(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formData.name.trim() || !formData.wallet.trim() || !formData.amount) {
-      onSuccess?.("Por favor completa todos los campos obligatorios");
+      alert("Por favor completa todos los campos obligatorios");
       return;
     }
+
     const numAmount = parseFloat(formData.amount);
     if (numAmount <= 0) {
-      onSuccess?.("El monto de inversión debe ser mayor a 0");
+      alert("El monto de inversión debe ser mayor a 0");
       return;
     }
 
-    if (isEdit && referral) {
-      const updates = {
+    try {
+      const referralData = {
         name: formData.name.trim(),
         wallet: formData.wallet.trim(),
         amount: numAmount,
         cycle: parseInt(formData.cycle),
         generation: parseInt(formData.generation) as 1 | 2,
+        status: "active" as const,
         investmentDate: formData.investmentDate,
         expirationDate: formData.expirationDate,
+        startDate: new Date().toISOString().split("T")[0],
+        cycleCount: 1,
         earnings: calculations.referralEarnings,
         userIncome: calculations.myIncome,
+        totalEarned: calculations.totalEarned,
       };
-      updateReferral(referral.id, updates);
-      onUpdate?.(referral.id, updates);
-      onSuccess?.("Referido actualizado exitosamente");
-      return;
-    }
 
-    const referralData = {
-      name: formData.name.trim(),
-      wallet: formData.wallet.trim(),
-      amount: parseFloat(formData.amount),
-      cycle: parseInt(formData.cycle),
-      generation: parseInt(formData.generation) as 1 | 2,
-      status: "active" as const,
-      investmentDate: formData.investmentDate,
-      expirationDate: formData.expirationDate,
-      startDate: new Date().toISOString().split("T")[0],
-      cycleCount: 1,
-      earnings: calculations.referralEarnings,
-      userIncome: calculations.myIncome,
-      totalEarned: calculations.totalEarned,
-    };
+      if (isEdit && referral) {
+        await updateReferral(referral.id, referralData);
+      } else {
+        await addReferral(referralData);
+      }
 
-    addReferral(referralData);
-    onSuccess?.("Referido agregado exitosamente!");
-    if (!isEdit) {
-      const today = new Date().toISOString().split("T")[0];
-      setFormData({
-        name: "",
-        wallet: "",
-        amount: "",
-        cycle: "1",
-        generation: "1",
-        investmentDate: today,
-        expirationDate: calculateExpirationDate(today),
-      });
-      setCalculations({ referralEarnings: 0, myIncome: 0, totalEarned: 0 });
+      onSuccess?.();
+    } catch (error) {
+      alert("Error al guardar el referido");
     }
   };
 
@@ -252,62 +152,20 @@ export function AddReferralForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <div className="relative" ref={suggestionsRef}>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre Completo *
               </label>
-              <div className="relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  onFocus={() => {
-                    if (!isEdit && formData.name.trim() !== "") {
-                      setShowSuggestions(true);
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 pr-8"
-                  placeholder="Nombre del referido"
-                  required
-                />
-                {formData.name && !isEdit && (
-                  <button
-                    type="button"
-                    onClick={clearName}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Dropdown de sugerencias */}
-              {showSuggestions && filteredReferrals.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                  {filteredReferrals.map((ref) => (
-                    <div
-                      key={ref.id}
-                      onClick={() => handleSelectReferral(ref)}
-                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                    >
-                      <p className="font-medium text-gray-900">{ref.name}</p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {ref.wallet}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Gen {ref.generation} •{" "}
-                        {ref.amount.toLocaleString("es-ES", {
-                          style: "currency",
-                          currency: "USD",
-                        })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Nombre del referido"
+                required
+              />
             </div>
 
             <div>
@@ -320,14 +178,13 @@ export function AddReferralForm({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, wallet: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="0x..."
                 required
               />
             </div>
           </div>
 
-          {/* Resto del formulario igual... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -339,7 +196,7 @@ export function AddReferralForm({
                 min="0"
                 value={formData.amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="0.00"
                 required
               />
@@ -356,7 +213,7 @@ export function AddReferralForm({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, cycle: e.target.value }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -367,7 +224,7 @@ export function AddReferralForm({
               <select
                 value={formData.generation}
                 onChange={(e) => handleGenerationChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="1">Primera Generación</option>
                 <option value="2">Segunda Generación</option>
@@ -382,7 +239,7 @@ export function AddReferralForm({
                 type="date"
                 value={formData.investmentDate}
                 onChange={(e) => handleInvestmentDateChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -413,26 +270,22 @@ export function AddReferralForm({
                 <div>
                   <p className="text-gray-600">Ganancias del Referido:</p>
                   <p className="font-medium">
-                    ${calculations.referralEarnings.toFixed(2)}
+                    {formatCurrency(calculations.referralEarnings)}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-600">Mi Ingreso:</p>
                   <p className="font-medium">
-                    ${calculations.myIncome.toFixed(2)}
+                    {formatCurrency(calculations.myIncome)}
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-600">Total:</p>
                   <p className="font-medium">
-                    ${calculations.totalEarned.toFixed(2)}
+                    {formatCurrency(calculations.totalEarned)}
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                * Cálculos basados en{" "}
-                {formData.generation === "1" ? "primera" : "segunda"} generación
-              </p>
             </div>
           )}
 

@@ -15,91 +15,107 @@ import {
 import { db } from "./firebase";
 import { Referral, PersonalInvestment, Lead } from "@/types";
 
-
+// ==================== CONFIGURACIÓN ====================
 const COLLECTIONS = {
   REFERRALS: "referrals",
   PERSONAL_INVESTMENTS: "personalInvestments",
   LEADS: "leads",
 } as const;
 
-export class FirebaseService {
-  
-  static async getAll<T>(collectionName: string): Promise<T[]> {
+type CollectionName = keyof typeof COLLECTIONS;
+
+// ==================== ERROR HANDLING ====================
+class FirebaseError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public collection?: string
+  ) {
+    super(message);
+    this.name = "FirebaseError";
+  }
+}
+
+const handleFirebaseError = (
+  error: unknown,
+  operation: string,
+  collectionName?: string
+): never => {
+  console.error(`🔥 Firebase Error [${collectionName}] ${operation}:`, error);
+
+  if (error instanceof Error) {
+    throw new FirebaseError(error.message, "FIRESTORE_ERROR", collectionName);
+  }
+
+  throw new FirebaseError(
+    `Unknown error during ${operation}`,
+    "UNKNOWN_ERROR",
+    collectionName
+  );
+};
+
+// ==================== SERVICIO BASE GENÉRICO ====================
+export class FirebaseService<T extends { id: string }> {
+  constructor(private collectionName: string) {}
+
+  async getAll(): Promise<T[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, collectionName));
+      const querySnapshot = await getDocs(collection(db, this.collectionName));
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as T[];
     } catch (error) {
-      console.error(`Error getting all ${collectionName}:`, error);
-      throw error;
+      return handleFirebaseError(error, "getAll", this.collectionName);
     }
   }
 
-  static async getById<T>(
-    collectionName: string,
-    id: string
-  ): Promise<T | null> {
+  async getById(id: string): Promise<T | null> {
     try {
-      const docRef = doc(db, collectionName, id);
+      const docRef = doc(db, this.collectionName, id);
       const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as T;
-      }
-      return null;
+      return docSnap.exists()
+        ? ({ id: docSnap.id, ...docSnap.data() } as T)
+        : null;
     } catch (error) {
-      console.error(`Error getting ${collectionName} by id:`, error);
-      throw error;
+      return handleFirebaseError(error, "getById", this.collectionName);
     }
   }
 
-  static async create<T>(
-    collectionName: string,
-    data: Omit<T, "id">
-  ): Promise<T> {
+  async create(data: Omit<T, "id">): Promise<T> {
     try {
-      const docRef = await addDoc(collection(db, collectionName), data);
+      const docRef = await addDoc(collection(db, this.collectionName), data);
       return { id: docRef.id, ...data } as T;
     } catch (error) {
-      console.error(`Error creating ${collectionName}:`, error);
-      throw error;
+      return handleFirebaseError(error, "create", this.collectionName);
     }
   }
 
-  static async update<T>(
-    collectionName: string,
-    id: string,
-    data: Partial<T>
-  ): Promise<void> {
+  async update(id: string, data: Partial<T>): Promise<void> {
     try {
-      const docRef = doc(db, collectionName, id);
-      await updateDoc(docRef, data);
+      const docRef = doc(db, this.collectionName, id);
+      await updateDoc(docRef, data as any);
     } catch (error) {
-      console.error(`Error updating ${collectionName}:`, error);
-      throw error;
+      return handleFirebaseError(error, "update", this.collectionName);
     }
   }
 
-  static async delete(collectionName: string, id: string): Promise<void> {
+  async delete(id: string): Promise<void> {
     try {
-      const docRef = doc(db, collectionName, id);
+      const docRef = doc(db, this.collectionName, id);
       await deleteDoc(docRef);
     } catch (error) {
-      console.error(`Error deleting ${collectionName}:`, error);
-      throw error;
+      return handleFirebaseError(error, "delete", this.collectionName);
     }
   }
 
-  static subscribeToCollection<T>(
-    collectionName: string,
+  subscribe(
     callback: (data: T[]) => void,
     orderByField?: string,
     orderDirection: "asc" | "desc" = "asc"
   ): Unsubscribe {
     try {
-      const collectionRef = collection(db, collectionName);
+      const collectionRef = collection(db, this.collectionName);
       const q = orderByField
         ? query(collectionRef, orderBy(orderByField, orderDirection))
         : collectionRef;
@@ -112,188 +128,143 @@ export class FirebaseService {
         callback(data);
       });
     } catch (error) {
-      console.error(`Error subscribing to ${collectionName}:`, error);
-      throw error;
+      return handleFirebaseError(error, "subscribe", this.collectionName);
+    }
+  }
+
+  // ✅ MÉTODOS ESPECÍFICOS CON QUERIES
+  async getByField(field: string, value: unknown): Promise<T[]> {
+    try {
+      const q = query(
+        collection(db, this.collectionName),
+        where(field, "==", value)
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as T[];
+    } catch (error) {
+      return handleFirebaseError(
+        error,
+        `getByField:${field}`,
+        this.collectionName
+      );
     }
   }
 }
 
+// ==================== SERVICIOS ESPECÍFICOS ====================
 export class ReferralService {
+  private static service = new FirebaseService<Referral>(COLLECTIONS.REFERRALS);
+
   static async getAll(): Promise<Referral[]> {
-    return FirebaseService.getAll<Referral>(COLLECTIONS.REFERRALS);
+    return this.service.getAll();
   }
 
   static async getById(id: string): Promise<Referral | null> {
-    return FirebaseService.getById<Referral>(COLLECTIONS.REFERRALS, id);
+    return this.service.getById(id);
   }
 
   static async create(data: Omit<Referral, "id">): Promise<Referral> {
-    return FirebaseService.create<Referral>(COLLECTIONS.REFERRALS, data);
+    return this.service.create(data);
   }
 
   static async update(id: string, data: Partial<Referral>): Promise<void> {
-    return FirebaseService.update<Referral>(COLLECTIONS.REFERRALS, id, data);
+    return this.service.update(id, data);
   }
 
   static async delete(id: string): Promise<void> {
-    return FirebaseService.delete(COLLECTIONS.REFERRALS, id);
+    return this.service.delete(id);
   }
 
   static async getByStatus(status: string): Promise<Referral[]> {
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.REFERRALS),
-        where("status", "==", status)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Referral[];
-    } catch (error) {
-      console.error("Error getting referrals by status:", error);
-      throw error;
-    }
+    return this.service.getByField("status", status);
   }
 
   static async getByGeneration(generation: number): Promise<Referral[]> {
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.REFERRALS),
-        where("generation", "==", generation)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Referral[];
-    } catch (error) {
-      console.error("Error getting referrals by generation:", error);
-      throw error;
-    }
+    return this.service.getByField("generation", generation);
   }
 
   static subscribe(callback: (referrals: Referral[]) => void): Unsubscribe {
-    return FirebaseService.subscribeToCollection<Referral>(
-      COLLECTIONS.REFERRALS,
-      callback,
-      "startDate",
-      "desc"
-    );
+    return this.service.subscribe(callback, "startDate", "desc");
   }
 }
 
 export class PersonalInvestmentService {
+  private static service = new FirebaseService<PersonalInvestment>(
+    COLLECTIONS.PERSONAL_INVESTMENTS
+  );
+
   static async getAll(): Promise<PersonalInvestment[]> {
-    return FirebaseService.getAll<PersonalInvestment>(
-      COLLECTIONS.PERSONAL_INVESTMENTS
-    );
+    return this.service.getAll();
   }
 
   static async getById(id: string): Promise<PersonalInvestment | null> {
-    return FirebaseService.getById<PersonalInvestment>(
-      COLLECTIONS.PERSONAL_INVESTMENTS,
-      id
-    );
+    return this.service.getById(id);
   }
 
   static async create(
     data: Omit<PersonalInvestment, "id">
   ): Promise<PersonalInvestment> {
-    return FirebaseService.create<PersonalInvestment>(
-      COLLECTIONS.PERSONAL_INVESTMENTS,
-      data
-    );
+    return this.service.create(data);
   }
 
   static async update(
     id: string,
     data: Partial<PersonalInvestment>
   ): Promise<void> {
-    return FirebaseService.update<PersonalInvestment>(
-      COLLECTIONS.PERSONAL_INVESTMENTS,
-      id,
-      data
-    );
+    return this.service.update(id, data);
   }
 
   static async delete(id: string): Promise<void> {
-    return FirebaseService.delete(COLLECTIONS.PERSONAL_INVESTMENTS, id);
+    return this.service.delete(id);
   }
 
   static async getByStatus(status: string): Promise<PersonalInvestment[]> {
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.PERSONAL_INVESTMENTS),
-        where("status", "==", status)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as PersonalInvestment[];
-    } catch (error) {
-      console.error("Error getting investments by status:", error);
-      throw error;
-    }
+    return this.service.getByField("status", status);
   }
 
   static subscribe(
     callback: (investments: PersonalInvestment[]) => void
   ): Unsubscribe {
-    return FirebaseService.subscribeToCollection<PersonalInvestment>(
-      COLLECTIONS.PERSONAL_INVESTMENTS,
-      callback,
-      "startDate",
-      "desc"
-    );
+    return this.service.subscribe(callback, "startDate", "desc");
   }
 }
 
 export class LeadService {
+  private static service = new FirebaseService<Lead>(COLLECTIONS.LEADS);
+
   static async getAll(): Promise<Lead[]> {
-    return FirebaseService.getAll<Lead>(COLLECTIONS.LEADS);
+    return this.service.getAll();
   }
 
   static async getById(id: string): Promise<Lead | null> {
-    return FirebaseService.getById<Lead>(COLLECTIONS.LEADS, id);
+    return this.service.getById(id);
   }
 
   static async create(data: Omit<Lead, "id">): Promise<Lead> {
-    return FirebaseService.create<Lead>(COLLECTIONS.LEADS, data);
+    return this.service.create(data);
   }
 
   static async update(id: string, data: Partial<Lead>): Promise<void> {
-    return FirebaseService.update<Lead>(COLLECTIONS.LEADS, id, data);
+    return this.service.update(id, data);
   }
 
   static async delete(id: string): Promise<void> {
-    return FirebaseService.delete(COLLECTIONS.LEADS, id);
+    return this.service.delete(id);
   }
 
   static async getByStatus(status: string): Promise<Lead[]> {
-    try {
-      const q = query(
-        collection(db, COLLECTIONS.LEADS),
-        where("status", "==", status)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Lead[];
-    } catch (error) {
-      console.error("Error getting leads by status:", error);
-      throw error;
-    }
+    return this.service.getByField("status", status);
   }
 
   static subscribe(callback: (leads: Lead[]) => void): Unsubscribe {
-    return FirebaseService.subscribeToCollection<Lead>(
-      COLLECTIONS.LEADS,
-      callback,
-      "contactDate",
-      "desc"
-    );
+    return this.service.subscribe(callback, "contactDate", "desc");
   }
 }
+
+// ✅ EXPORTACIÓN PARA USO DIRECTO SI ES NECESARIO
+export const createFirebaseService = <T extends { id: string }>(
+  collectionName: string
+) => new FirebaseService<T>(collectionName);

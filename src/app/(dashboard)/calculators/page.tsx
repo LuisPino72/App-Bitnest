@@ -1,33 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
-import { Calculator, DollarSign, Users, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { DollarSign, Users } from "lucide-react";
 import PersonalIncomeCalculator from "@/components/calculators/PersonalIncomeCalculator";
 import ReferralIncomeCalculator from "@/components/calculators/ReferralIncomeCalculator";
 
+type CalculatorTab = "personal" | "referrals";
+
 export default function CalculatorsPage() {
-  const [activeTab, setActiveTab] = useState<"personal" | "referrals">(
-    "personal"
-  );
+  const [activeTab, setActiveTab] = useState<CalculatorTab>("personal");
 
   const tabs = [
     {
-      id: "personal",
+      id: "personal" as CalculatorTab,
       label: "Inversión Personal",
       icon: DollarSign,
       description: "Calcula tus ganancias personales con reinversión",
     },
     {
-      id: "referrals",
+      id: "referrals" as CalculatorTab,
       label: "Ingresos por Referidos",
       icon: Users,
       description: "Proyecta ingresos de tu red de referidos",
     },
   ];
 
+  const activeTabInfo = tabs.find((tab) => tab.id === activeTab);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Calculadoras</h1>
         <p className="text-gray-600 mt-2">
@@ -36,14 +37,13 @@ export default function CalculatorsPage() {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="card">
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center ${
                   activeTab === tab.id
                     ? "border-primary-500 text-primary-600"
@@ -57,27 +57,15 @@ export default function CalculatorsPage() {
           </nav>
         </div>
 
-        {/* Tab Description */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center">
-            {tabs.find((tab) => tab.id === activeTab)?.icon && (
-              <div className="mr-3">
-                {tabs.find((tab) => tab.id === activeTab)?.icon &&
-                  React.createElement(
-                    tabs.find((tab) => tab.id === activeTab)!.icon,
-                    {
-                      className: "h-5 w-5 text-primary-600",
-                    }
-                  )}
-              </div>
+            {activeTabInfo?.icon && (
+              <activeTabInfo.icon className="h-5 w-5 text-primary-600 mr-3" />
             )}
-            <p className="text-gray-700">
-              {tabs.find((tab) => tab.id === activeTab)?.description}
-            </p>
+            <p className="text-gray-700">{activeTabInfo?.description}</p>
           </div>
         </div>
 
-        {/* Calculator Content */}
         <div className="p-6">
           {activeTab === "personal" && <PersonalIncomeCalculator />}
           {activeTab === "referrals" && <ReferralIncomeCalculator />}

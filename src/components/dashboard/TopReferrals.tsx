@@ -1,12 +1,47 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardMetrics } from "@/hooks";
+import { useFirebaseDashboardMetrics } from "@/hooks";
 import { formatCurrency } from "@/lib/businessUtils";
 import { Crown, Medal, Award } from "lucide-react";
 
 export function TopReferrals() {
-  const { topReferrals } = useDashboardMetrics();
+  const { topReferrals, loading } = useFirebaseDashboardMetrics();
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Crown className="h-5 w-5 text-primary-600" />
+            Cargando top referidos...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="h-6 w-6 bg-gray-300 rounded-full"></div>
+                  <div>
+                    <div className="h-4 bg-gray-300 rounded w-20 mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-16"></div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="h-4 bg-gray-300 rounded w-16 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-12"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const getIcon = (index: number) => {
     switch (index) {
@@ -68,7 +103,7 @@ export function TopReferrals() {
                       {formatCurrency(referral.amount)}
                     </p>
                     <p className="text-sm text-success-600">
-                      Estado: {referral.status}
+                      +{formatCurrency(referral.userIncome || 0)}
                     </p>
                   </div>
                 </div>
