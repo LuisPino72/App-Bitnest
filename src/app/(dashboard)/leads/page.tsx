@@ -120,7 +120,7 @@ export default function LeadsPage() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Gestión de Leads
+              Gestión de personas contactadas
             </h1>
             <p className="text-gray-600 mt-1">Cargando...</p>
           </div>

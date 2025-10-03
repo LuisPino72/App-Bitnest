@@ -74,9 +74,9 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
     isMobile
       ? cn(
           "fixed inset-y-0 left-0 z-40 transform transition-transform",
-          isMobileOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"
+          isMobileOpen ? "translate-x-0 w-54" : "-translate-x-full w-54"
         )
-      : cn("relative h-full flex-shrink-0", isCollapsed ? "w-16" : "w-64")
+      : cn("relative h-full flex-shrink-0", isCollapsed ? "w-16" : "w-54")
   );
 
   const overlayClasses = cn(
@@ -117,7 +117,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
             <LayoutDashboard className="h-6 w-6 text-blue-600 flex-shrink-0" />
             {(!isCollapsed || isMobile) && (
               <span className="ml-2 text-lg font-bold text-gray-900 whitespace-nowrap">
-                Bitnest MLM
+                Bitnest
               </span>
             )}
           </div>
@@ -188,7 +188,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
               !isCollapsed || isMobile ? "opacity-100" : "opacity-0"
             )}
           >
-            © {new Date().getFullYear()} Bitnest MLM
+            Gestión Bitnest {new Date().getFullYear()} 
           </div>
         </div>
       </div>
