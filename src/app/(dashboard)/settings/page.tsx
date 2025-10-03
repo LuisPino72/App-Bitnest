@@ -17,7 +17,6 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface ExportReferral {
   name: string;
-  phone?: string | undefined;
   wallet: string;
   status: string;
   generation: number;
@@ -102,7 +101,6 @@ export default function ExportPage() {
       },
       referrals: referrals.map((ref) => ({
         name: ref.name,
-        phone: ref.phone || undefined,
         wallet: ref.wallet,
         status: ref.status,
         generation: ref.generation,
@@ -137,7 +135,7 @@ export default function ExportPage() {
 
       // Datos de referidos
       exportData.referrals.forEach((ref) => {
-        csvContent += `"${ref.name}","","${ref.phone || ""}","${ref.wallet}","${
+        csvContent += `"${ref.name}","${ref.wallet}","${
           ref.status
         }","${ref.generation}","${formatCurrency(
           ref.investmentAmount
@@ -319,7 +317,6 @@ export default function ExportPage() {
 
         const referralsData = exportData.referrals.map((ref) => [
           ref.name,
-          ref.phone || "N/A",
           ref.wallet.substring(0, 15) + "...",
           ref.status,
           `Gen ${ref.generation}`,

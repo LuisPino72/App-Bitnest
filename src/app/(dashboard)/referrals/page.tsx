@@ -16,9 +16,10 @@ export default function ReferralsPage() {
   const { referrals, addReferral, updateReferral, deleteReferral, loading } =
     useFirebaseReferrals();
 
-  const [filterGeneration, setFilterGeneration] = useState<"all" | "1" | "2">(
-    "all"
-  );
+  // ✅ ACTUALIZADO: Soporte para todas las generaciones
+  const [filterGeneration, setFilterGeneration] = useState<
+    "all" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
+  >("all");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "completed" | "expired"
   >("all");
@@ -30,20 +31,36 @@ export default function ReferralsPage() {
   const [cycleActionLoading, setCycleActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Estadísticas
+  // ✅ ESTADÍSTICAS ACTUALIZADAS: Para todas las generaciones
   const activeReferralPersons = useMemo(
     () => getActiveReferralPersons(referrals),
     [referrals]
   );
-  const firstGenActive = activeReferralPersons.filter(
-    (r) => r.generation === 1
-  ).length;
-  const secondGenActive = activeReferralPersons.filter(
-    (r) => r.generation === 2
-  ).length;
+
+  // Contar referidos activos por generación
+  const generationStats = useMemo(() => {
+    const stats = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0,
+      7: 0,
+    };
+
+    activeReferralPersons.forEach((referral) => {
+      if (stats[referral.generation] !== undefined) {
+        stats[referral.generation]++;
+      }
+    });
+
+    return stats;
+  }, [activeReferralPersons]);
+
   const totalUniqueReferrals = new Set(referrals.map((r) => r.wallet)).size;
 
-  // Filtrado
+  // ✅ FILTRADO ACTUALIZADO: Soporta todas las generaciones
   const filteredReferrals = useMemo(() => {
     return referrals
       .filter((referral) => {
@@ -68,7 +85,7 @@ export default function ReferralsPage() {
       });
   }, [referrals, filterGeneration, filterStatus, searchTerm]);
 
-  // Handlers
+  // ✅ HANDLERS ACTUALIZADOS: Cálculo correcto para todas las generaciones
   const handleFinishCycle = async (referralId: string) => {
     setCycleActionLoading(true);
     await updateReferral(referralId, { status: "completed" });
@@ -86,9 +103,19 @@ export default function ReferralsPage() {
       (referral.amount + referral.earnings).toFixed(2)
     );
     const newEarnings = parseFloat((newAmount * 0.24).toFixed(2));
-    const newUserIncome = parseFloat(
-      (newEarnings * (referral.generation === 1 ? 0.2 : 0.1)).toFixed(2)
-    );
+
+    // ✅ CÁLCULO CORRECTO PARA TODAS LAS GENERACIONES
+    const commissionRates = {
+      1: 0.2,
+      2: 0.1,
+      3: 0.05,
+      4: 0.05,
+      5: 0.05,
+      6: 0.05,
+      7: 0.05,
+    };
+    const commissionRate = commissionRates[referral.generation] || 0;
+    const newUserIncome = parseFloat((newEarnings * commissionRate).toFixed(2));
 
     const today = new Date().toISOString().split("T")[0];
     const expirationDate = new Date(today);
@@ -117,6 +144,29 @@ export default function ReferralsPage() {
     if (confirm("¿Estás seguro de que quieres eliminar este referido?")) {
       await deleteReferral(id);
     }
+  };
+
+  // ✅ FUNCIÓN MEJORADA: Badge de generación con colores para todas las generaciones
+  const getGenerationBadge = (generation: number) => {
+    const baseClasses =
+      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium";
+
+    const colors = {
+      1: "bg-blue-100 text-blue-800",
+      2: "bg-yellow-100 text-yellow-800",
+      3: "bg-green-100 text-green-800",
+      4: "bg-purple-100 text-purple-800",
+      5: "bg-pink-100 text-pink-800",
+      6: "bg-indigo-100 text-indigo-800",
+      7: "bg-orange-100 text-orange-800",
+    };
+
+    const colorClass =
+      colors[generation as keyof typeof colors] || "bg-gray-100 text-gray-800";
+
+    return (
+      <span className={`${baseClasses} ${colorClass}`}>Gen {generation}</span>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -196,8 +246,9 @@ export default function ReferralsPage() {
         </Button>
       </div>
 
-      {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* ✅ ESTADÍSTICAS ACTUALIZADAS: Muestra dinámicamente las generaciones que tienen referidos */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        {/* Tarjeta de Total de Referidos */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -209,28 +260,41 @@ export default function ReferralsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-green-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Primera Gen.</p>
-                <p className="text-2xl font-bold">{firstGenActive}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-yellow-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Segunda Gen.</p>
-                <p className="text-2xl font-bold">{secondGenActive}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
+        {/* ✅ GENERAR TARJETAS DINÁMICAMENTE PARA CADA GENERACIÓN CON REFERIDOS */}
+        {Object.entries(generationStats)
+          .filter(([_, count]) => count > 0)
+          .map(([generation, count]) => (
+            <Card key={generation}>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Users
+                    className={`h-8 w-8 ${
+                      generation === "1"
+                        ? "text-green-500"
+                        : generation === "2"
+                        ? "text-yellow-500"
+                        : generation === "3"
+                        ? "text-purple-500"
+                        : generation === "4"
+                        ? "text-pink-500"
+                        : generation === "5"
+                        ? "text-indigo-500"
+                        : generation === "6"
+                        ? "text-orange-500"
+                        : "text-red-500"
+                    }`}
+                  />
+                  <div className="ml-3">
+                    <p className="text-sm text-gray-600">Gen {generation}</p>
+                    <p className="text-2xl font-bold">{count}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+        {/* Tarjeta de Total Activos */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -246,7 +310,7 @@ export default function ReferralsPage() {
         </Card>
       </div>
 
-      {/* Filtros y Búsqueda */}
+      {/* ✅ FILTROS ACTUALIZADOS: Selector de generación con todas las opciones */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -271,6 +335,11 @@ export default function ReferralsPage() {
                 <option value="all">Todas las generaciones</option>
                 <option value="1">Primera generación</option>
                 <option value="2">Segunda generación</option>
+                <option value="3">Tercera generación</option>
+                <option value="4">Cuarta generación</option>
+                <option value="5">Quinta generación</option>
+                <option value="6">Sexta generación</option>
+                <option value="7">Séptima generación</option>
               </select>
               <select
                 value={filterStatus}
@@ -280,7 +349,6 @@ export default function ReferralsPage() {
                 <option value="all">Todos los estados</option>
                 <option value="active">Activo</option>
                 <option value="completed">Completado</option>
-                <option value="expired">Expirado</option>
               </select>
             </div>
           </div>
@@ -331,15 +399,7 @@ export default function ReferralsPage() {
                     </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-center">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        referral.generation === 1
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      Gen {referral.generation}
-                    </span>
+                    {getGenerationBadge(referral.generation)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-center font-medium">
                     {formatCurrency(referral.amount)}

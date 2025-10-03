@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DollarSign, Users } from "lucide-react";
 import PersonalIncomeCalculator from "@/components/calculators/PersonalIncomeCalculator";
-import ReferralIncomeCalculator from "@/components/calculators/ReferralIncomeCalculator";
+import ReferralIncomeCalculator  from "@/components/calculators/ReferralIncomeCalculator";
 
 type CalculatorTab = "personal" | "referrals";
 

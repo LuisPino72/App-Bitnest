@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFirebaseReferrals } from "@/hooks";
-import type { Referral } from "@/types";
+import type { Referral, Generation } from "@/types";
 import {
   calculateReferralEarnings,
   calculateUserIncome,
@@ -43,6 +43,15 @@ export function AddReferralForm({
     myIncome: 0,
     totalEarned: 0,
   });
+  const generationOptions = [
+    { value: 1, label: "1ra Generación (20%)" },
+    { value: 2, label: "2da Generación (10%)" },
+    { value: 3, label: "3ra Generación (5%)" },
+    { value: 4, label: "4ta Generación (5%)" },
+    { value: 5, label: "5ta Generación (5%)" },
+    { value: 6, label: "6ta Generación (5%)" },
+    { value: 7, label: "7ma Generación (5%)" },
+  ];
 
   // Estados para autocompletado
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,7 +92,7 @@ export function AddReferralForm({
     }
   }, [referral]);
 
-  const updateCalculations = (amount: number, generation: 1 | 2) => {
+  const updateCalculations = (amount: number, generation: Generation) => {
     const referralEarnings = calculateReferralEarnings(amount);
     const myIncome = calculateUserIncome(referralEarnings, generation);
     setCalculations({
@@ -96,7 +105,7 @@ export function AddReferralForm({
   const handleAmountChange = (amount: string) => {
     const numAmount = parseFloat(amount) || 0;
     setFormData((prev) => ({ ...prev, amount }));
-    updateCalculations(numAmount, parseInt(formData.generation) as 1 | 2);
+    updateCalculations(numAmount, parseInt(formData.generation) as Generation);
   };
 
   const handleGenerationChange = (generation: string) => {
@@ -104,7 +113,7 @@ export function AddReferralForm({
     if (formData.amount) {
       updateCalculations(
         parseFloat(formData.amount),
-        parseInt(generation) as 1 | 2
+        parseInt(generation) as Generation
       );
     }
   };
@@ -151,7 +160,7 @@ export function AddReferralForm({
         wallet: formData.wallet.trim(),
         amount: numAmount,
         cycle: parseInt(formData.cycle),
-        generation: parseInt(formData.generation) as 1 | 2,
+        generation: parseInt(formData.generation) as Generation,
         status: "active" as const,
         investmentDate: formData.investmentDate,
         expirationDate: formData.expirationDate,
@@ -230,6 +239,9 @@ export function AddReferralForm({
                       <div className="text-gray-500 text-xs truncate">
                         {ref.wallet}
                       </div>
+                      <div className="text-gray-400 text-xs">
+                        Gen {ref.generation}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -286,6 +298,7 @@ export function AddReferralForm({
               />
             </div>
 
+            {/*Selec de generación con todas las opciones */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Generación
@@ -295,8 +308,11 @@ export function AddReferralForm({
                 onChange={(e) => handleGenerationChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="1">Primera Generación</option>
-                <option value="2">Segunda Generación</option>
+                {generationOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -341,11 +357,21 @@ export function AddReferralForm({
                   <p className="font-medium">
                     {formatCurrency(calculations.referralEarnings)}
                   </p>
+                  <p className="text-xs text-gray-500">(24% del monto)</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Mi Ingreso:</p>
                   <p className="font-medium">
                     {formatCurrency(calculations.myIncome)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    (
+                    {
+                      generationOptions
+                        .find((g) => g.value === parseInt(formData.generation))
+                        ?.label.split("(")[1]
+                    }
+                    )
                   </p>
                 </div>
                 <div>

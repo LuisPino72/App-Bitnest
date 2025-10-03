@@ -7,8 +7,9 @@ import {
   CalculatorResult,
   ReferralCalculatorInput,
   ReferralCalculatorResult,
+  Generation,
 } from "@/types";
-import { BUSINESS_CONSTANTS } from "@/types/constants";
+import { BUSINESS_CONSTANTS, getCommissionRate } from "@/types/constants";
 
 // ==================== UTILIDADES DE FECHA ====================
 export const getTodayISO = (): string => new Date().toISOString().split("T")[0];
@@ -40,11 +41,10 @@ export const calculateReferralEarnings = (amount: number): number =>
 
 export const calculateUserIncome = (
   referralEarnings: number,
-  generation: 1 | 2 = 1
+  generation: Generation = 1
 ): number => {
-  const baseCommission =
-    referralEarnings * BUSINESS_CONSTANTS.USER_COMMISSION_RATE;
-  return generation === 1 ? baseCommission : baseCommission * 0.5;
+  const commissionRate = getCommissionRate(generation);
+  return referralEarnings * commissionRate;
 };
 
 export const calculatePersonalEarnings = (amount: number): number =>
@@ -110,31 +110,64 @@ export const calculateDashboardMetrics = (
   const activeReferrals = getActiveReferrals(referrals);
   const activeInvestments = getActiveInvestments(personalInvestments);
   const activeReferralPersons = getActiveReferralPersons(referrals);
-  
-  const firstGenReferrals = activeReferralPersons.filter(r => r.generation === 1);
-  const secondGenReferrals = activeReferralPersons.filter(r => r.generation === 2);
-  const interestedLeads = leads.filter(l => l.status === "interested");
+
+  // ✅ Agrega filtros para todas las generaciones
+  const firstGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 1
+  );
+  const secondGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 2
+  );
+  const thirdGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 3
+  );
+  const fourthGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 4
+  );
+  const fifthGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 5
+  );
+  const sixthGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 6
+  );
+  const seventhGenReferrals = activeReferralPersons.filter(
+    (r) => r.generation === 7
+  );
+
+  const interestedLeads = leads.filter((l) => l.status === "interested");
 
   // Cálculos de inversiones
-  const totalPersonalInvestments = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-  const totalReferralInvestments = activeReferrals.reduce((sum, r) => sum + r.amount, 0);
+  const totalPersonalInvestments = activeInvestments.reduce(
+    (sum, inv) => sum + inv.amount,
+    0
+  );
+  const totalReferralInvestments = activeReferrals.reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
   const totalInvestments = totalPersonalInvestments + totalReferralInvestments;
 
   // Cálculos de ganancias
-  const referralIncome = activeReferrals.reduce((sum, r) => sum + (r.userIncome || 0), 0);
-  const personalEarnings = activeInvestments.reduce((sum, inv) => sum + (inv.earnings || 0), 0);
+  const referralIncome = activeReferrals.reduce(
+    (sum, r) => sum + (r.userIncome || 0),
+    0
+  );
+  const personalEarnings = activeInvestments.reduce(
+    (sum, inv) => sum + (inv.earnings || 0),
+    0
+  );
   const totalEarnings = referralIncome + personalEarnings + HISTORICAL_EARNINGS;
 
   // CÁLCULO DE monthlyEarnings:
   const referralMonthlyEarnings = activeReferrals
-    .filter(ref => {
+    .filter((ref) => {
       const refDate = new Date(ref.startDate || ref.investmentDate);
       return refDate >= thirtyDaysAgoDate;
     })
     .reduce((sum, ref) => sum + (ref.userIncome || 0), 0);
 
   const investmentMonthlyEarnings = activeInvestments
-    .filter(inv => {
+    .filter((inv) => {
       const invDate = new Date(inv.startDate);
       return invDate >= thirtyDaysAgoDate;
     })
@@ -144,8 +177,8 @@ export const calculateDashboardMetrics = (
 
   // Expirando hoy
   const expiringToday = [
-    ...activeReferrals.filter(r => r.expirationDate === today),
-    ...activeInvestments.filter(inv => inv.expirationDate === today)
+    ...activeReferrals.filter((r) => r.expirationDate === today),
+    ...activeInvestments.filter((inv) => inv.expirationDate === today),
   ].length;
 
   return {
@@ -153,6 +186,11 @@ export const calculateDashboardMetrics = (
     totalReferrals: activeReferralPersons.length,
     firstGeneration: firstGenReferrals.length,
     secondGeneration: secondGenReferrals.length,
+    thirdGeneration: thirdGenReferrals.length,
+    fourthGeneration: fourthGenReferrals.length,
+    fifthGeneration: fifthGenReferrals.length,
+    sixthGeneration: sixthGenReferrals.length,
+    seventhGeneration: seventhGenReferrals.length,
     totalEarnings,
     monthlyEarnings,
     expiringToday,
@@ -182,6 +220,7 @@ export const calculatePersonalIncomeProjection = (
   };
 };
 
+// Proyecciones
 export const calculateReferralIncomeProjection = (
   input: ReferralCalculatorInput
 ): ReferralCalculatorResult => {
@@ -294,7 +333,7 @@ export const getLeadStats = (leads: Lead[]) => {
 
 export const filterReferralsByGeneration = (
   referrals: Referral[],
-  generation?: 1 | 2
+  generation?: Generation
 ): Referral[] =>
   !generation
     ? referrals
@@ -322,6 +361,11 @@ export const searchItems = <T extends { name: string; phone?: string }>(
 export function calculateGenerationMetrics(referrals: Referral[]) {
   const firstGen = referrals.filter((r) => r.generation === 1);
   const secondGen = referrals.filter((r) => r.generation === 2);
+  const thirdGen = referrals.filter((r) => r.generation === 3);
+  const fourthGen = referrals.filter((r) => r.generation === 4);
+  const fifthGen = referrals.filter((r) => r.generation === 5);
+  const sixthGen = referrals.filter((r) => r.generation === 6);
+  const seventhGen = referrals.filter((r) => r.generation === 7);
 
   const calculateMetrics = (genReferrals: Referral[]) => ({
     count: genReferrals.length,
@@ -332,6 +376,11 @@ export function calculateGenerationMetrics(referrals: Referral[]) {
   return {
     firstGeneration: calculateMetrics(firstGen),
     secondGeneration: calculateMetrics(secondGen),
+    thirdGeneration: calculateMetrics(thirdGen),
+    fourthGeneration: calculateMetrics(fourthGen),
+    fifthGeneration: calculateMetrics(fifthGen),
+    sixthGeneration: calculateMetrics(sixthGen),
+    seventhGeneration: calculateMetrics(seventhGen),
   };
 }
 

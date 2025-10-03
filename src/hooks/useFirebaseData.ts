@@ -1,5 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { Referral, PersonalInvestment, Lead, DashboardMetrics } from "@/types";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Referral,
+  PersonalInvestment,
+  Lead,
+  DashboardMetrics,
+  Generation,
+} from "@/types";
 import {
   ReferralService,
   PersonalInvestmentService,
@@ -65,6 +71,13 @@ export const useFirebaseReferrals = () => {
     }
   }, []);
 
+  const getReferralsByGeneration = useCallback(
+    (generation: Generation): Referral[] => {
+      return referrals.filter((referral) => referral.generation === generation);
+    },
+    [referrals]
+  );
+
   return {
     referrals,
     loading,
@@ -72,10 +85,11 @@ export const useFirebaseReferrals = () => {
     addReferral,
     updateReferral,
     deleteReferral,
+    getReferralsByGeneration,
   };
 };
 
-// Hook para inversiones personales
+// Hook para inversiones personales 
 export const useFirebasePersonalInvestments = () => {
   const [investments, setInvestments] = useState<PersonalInvestment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +112,7 @@ export const useFirebasePersonalInvestments = () => {
   };
 };
 
-// Hook para leads
+// Hook para leads 
 export const useFirebaseLeads = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +135,7 @@ export const useFirebaseLeads = () => {
   };
 };
 
-// Hook para métricas del dashboard
+// useFirebaseDashboardMetrics
 export const useFirebaseDashboardMetrics = () => {
   const { referrals, loading: referralsLoading } = useFirebaseReferrals();
   const { investments, loading: investmentsLoading } =
@@ -135,15 +149,47 @@ export const useFirebaseDashboardMetrics = () => {
 
   const loading = referralsLoading || investmentsLoading || leadsLoading;
 
-  const metrics = calculateDashboardMetrics(
-    referrals,
-    investments,
-    leads,
-    isClient ? new Date().toISOString().split("T")[0] : undefined
-  );
+  // useMemo PARA CALCULAR MÉTRICAS SOLO CUANDO LOS DATOS CAMBIEN
+  const metrics = useMemo(() => {
+    if (loading) {
+      return {
+        totalInvestments: 0,
+        totalReferrals: 0,
+        firstGeneration: 0,
+        secondGeneration: 0,
+        thirdGeneration: 0,
+        fourthGeneration: 0,
+        fifthGeneration: 0,
+        sixthGeneration: 0,
+        seventhGeneration: 0,
+        totalEarnings: 0,
+        monthlyEarnings: 0,
+        expiringToday: 0,
+        activeLeads: 0,
+      } as DashboardMetrics;
+    }
 
-  const topReferrals = getTopReferrals(referrals, 3);
-  const expiringToday = getExpiringToday(referrals, investments);
+    const currentDate = isClient
+      ? new Date().toISOString().split("T")[0]
+      : undefined;
+    return calculateDashboardMetrics(
+      referrals,
+      investments,
+      leads,
+      currentDate
+    );
+  }, [referrals, investments, leads, loading, isClient]);
+
+  // useMemo PARA TOP REFERRALS Y EXPIRING TODAY
+  const topReferrals = useMemo(() => {
+    return loading ? [] : getTopReferrals(referrals, 3);
+  }, [referrals, loading]);
+
+  const expiringToday = useMemo(() => {
+    return loading
+      ? { referrals: [], investments: [] }
+      : getExpiringToday(referrals, investments);
+  }, [referrals, investments, loading]);
 
   return {
     metrics,

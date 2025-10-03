@@ -9,7 +9,7 @@ import {
 import { ReferralCalculatorInput, ReferralCalculatorResult } from "@/types";
 
 interface ReferralInput {
-  generation: 1 | 2;
+  generation: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   amount: number;
   count: number;
 }
@@ -40,12 +40,13 @@ export default function ReferralIncomeCalculator() {
   const updateInput = (field: keyof ReferralInput, value: string) => {
     const numValue =
       field === "generation"
-        ? (parseInt(value) as 1 | 2)
+        ? (parseInt(value) as 1 | 2 | 3 | 4 | 5 | 6 | 7)
         : parseFloat(value) || 0;
     setInput((prev) => ({ ...prev, [field]: numValue }));
   };
 
-  const commissionRate = input.generation === 1 ? 0.2 : 0.1;
+  const commissionRate =
+    input.generation === 1 ? 0.2 : input.generation === 2 ? 0.1 : 0.05;
 
   return (
     <div className="card p-6">
@@ -74,6 +75,10 @@ export default function ReferralIncomeCalculator() {
               >
                 <option value={1}>Primera Generación (20% comisión)</option>
                 <option value={2}>Segunda Generación (10% comisión)</option>
+                {/* ✅ Nueva opción */}
+                <option value={3}>
+                  Tercera a séptima generación (5% comisión)
+                </option>
               </select>
             </div>
 
@@ -156,6 +161,11 @@ export default function ReferralIncomeCalculator() {
               <li>
                 • <strong>Segunda Generación:</strong> 10% de las ganancias
               </li>
+              {/* ✅ Nueva línea de información */}
+              <li>
+                • <strong>Tercera a Séptima Generación:</strong> 5% de las
+                ganancias
+              </li>
               <li>
                 • <strong>Ganancias del referido:</strong> 24% por ciclo
               </li>
@@ -209,7 +219,8 @@ export default function ReferralIncomeCalculator() {
                         Referido {index + 1}
                       </span>
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        Gen {item.generation}
+                        {/* ✅ Mostrar "3-7" si la generación es >=3 */}
+                        Gen {item.generation >= 3 ? "3-7" : item.generation}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">

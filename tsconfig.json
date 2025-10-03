@@ -12,7 +12,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "forceConsistentCasingInFileNames": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
     "incremental": true,
 
     "plugins": [
