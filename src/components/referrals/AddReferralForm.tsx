@@ -25,7 +25,7 @@ export function AddReferralForm({
   onCancel,
   referral,
 }: AddReferralFormProps) {
-  const { addReferral, updateReferral } = useFirebaseReferrals();
+  const { addReferral, updateReferral, referrals } = useFirebaseReferrals();
   const isEdit = !!referral;
 
   const [formData, setFormData] = useState({
@@ -43,6 +43,22 @@ export function AddReferralForm({
     myIncome: 0,
     totalEarned: 0,
   });
+
+  // Estados para autocompletado
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredReferrals, setFilteredReferrals] = useState<Referral[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Cerrar sugerencias al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowSuggestions(false);
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
 
   // Iniciar formulario
   useEffect(() => {
@@ -98,6 +114,23 @@ export function AddReferralForm({
     setFormData((prev) => ({ ...prev, investmentDate: date, expirationDate }));
   };
 
+  const filterReferrals = (term: string) => {
+    if (!term.trim()) {
+      setFilteredReferrals([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const lowerTerm = term.toLowerCase();
+    const results = referrals.filter(
+      (ref) =>
+        ref.name.toLowerCase().includes(lowerTerm) ||
+        ref.wallet.toLowerCase().includes(lowerTerm)
+    );
+    setFilteredReferrals(results.slice(0, 5));
+    setShowSuggestions(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -137,6 +170,7 @@ export function AddReferralForm({
 
       onSuccess?.();
     } catch (error) {
+      console.error("Error al guardar el referido:", error);
       alert("Error al guardar el referido");
     }
   };
@@ -152,22 +186,57 @@ export function AddReferralForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <div>
+            {/* Campo de Nombre con Autocompletado */}
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre Completo *
               </label>
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData((prev) => ({ ...prev, name: value }));
+                  setSearchTerm(value);
+                  filterReferrals(value);
+                }}
+                onFocus={() => searchTerm && setShowSuggestions(true)}
+                onClick={(e) => e.stopPropagation()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Nombre del referido"
+                placeholder="Nombre del referido o parte de su billetera"
                 required
               />
+              {showSuggestions && filteredReferrals.length > 0 && (
+                <div
+                  className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {filteredReferrals.map((ref) => (
+                    <div
+                      key={ref.id}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: ref.name,
+                          wallet: ref.wallet,
+                        }));
+                        setSearchTerm("");
+                        setFilteredReferrals([]);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      <div className="font-medium">{ref.name}</div>
+                      <div className="text-gray-500 text-xs truncate">
+                        {ref.wallet}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* Campo de Billetera */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Dirección de Billetera *

@@ -49,7 +49,7 @@ export default function LeadsPage() {
       bg: "bg-red-50",
     },
     {
-      title: "Total Leads",
+      title: "Total contactados",
       count: leads.length,
       icon: Users,
       color: "text-blue-600",
@@ -126,7 +126,7 @@ export default function LeadsPage() {
           </div>
           <Button disabled>
             <Plus className="h-4 w-4 mr-2" />
-            Nuevo Lead
+            Nueva persona
           </Button>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -150,7 +150,7 @@ export default function LeadsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Leads</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de personas contactadas</h1>
           <p className="text-gray-600 mt-1">
             Administra y sigue tu pipeline de contactos
           </p>
@@ -160,7 +160,7 @@ export default function LeadsPage() {
           className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          Nuevo Lead
+          Nueva persona
         </Button>
       </div>
 
@@ -220,7 +220,7 @@ export default function LeadsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar leads..."
+                placeholder="Buscar persona..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -297,7 +297,7 @@ export default function LeadsPage() {
               <p className="text-gray-400 mt-1">
                 {searchTerm
                   ? "Intenta con otros términos de búsqueda"
-                  : "Comienza agregando nuevos leads a tu pipeline"}
+                  : "Comienza agregando nuevas personas"}
               </p>
               {!searchTerm && (
                 <Button onClick={() => setShowForm(true)} className="mt-4">
@@ -348,7 +348,7 @@ function AddLeadForm({ onSuccess }: { onSuccess: () => void }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Plus className="h-5 w-5" />
-            Agregar Nuevo Lead
+            Agregar Nueva persona
           </CardTitle>
         </CardHeader>
         <CardContent>

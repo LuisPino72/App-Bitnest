@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, Database, FileText, Users, DollarSign } from "lucide-react";
+import {
+  Download,
+  Database,
+  FileText,
+  Users,
+  DollarSign,
+  File,
+} from "lucide-react";
 import { useFirebaseReferrals, useFirebasePersonalInvestments } from "@/hooks";
 import { formatCurrency } from "@/lib/businessUtils";
 import { Referral, PersonalInvestment } from "@/types";
@@ -155,8 +162,8 @@ export default function ExportPage() {
       });
 
       csvContent += `\n\nRESUMEN\n`;
-      csvContent += `Total Referidos: ${exportData.summary.totalReferrals}\n`;
-      csvContent += `Referidos Activos: ${exportData.summary.activeReferrals}\n`;
+      csvContent += `Total Inversiones de referidos: ${exportData.summary.totalReferrals}\n`;
+      csvContent += `Inversiones referidos Activas: ${exportData.summary.activeReferrals}\n`;
       csvContent += `Comisión Total: ${formatCurrency(
         exportData.summary.totalCommission
       )}\n`;
@@ -237,6 +244,176 @@ export default function ExportPage() {
     } catch (error) {
       console.error("Error exporting to Excel:", error);
       alert("Error al exportar a Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportToPDF = async () => {
+    setIsExporting(true);
+
+    try {
+      const exportData = prepareExportData();
+
+      // Importación dinámica de jsPDF
+      const jsPDF = (await import("jspdf")).default;
+      const autoTable = await import("jspdf-autotable").then(
+        (module) => module.default
+      );
+
+      // Crear PDF
+      const doc = new jsPDF();
+
+      // Configuración inicial
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text("BITNEST - REPORTE DE DATOS", 105, 20, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generado el: ${new Date().toLocaleString()}`, 105, 30, {
+        align: "center",
+      });
+
+      let yPosition = 45;
+
+      // RESUMEN
+      doc.setFontSize(16);
+      doc.setTextColor(40, 40, 40);
+      doc.text("RESUMEN GENERAL", 20, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      const summaryData = [
+        ["Total Referidos", exportData.summary.totalReferrals.toString()],
+        ["Referidos Activos", exportData.summary.activeReferrals.toString()],
+        ["Comisión Total", formatCurrency(exportData.summary.totalCommission)],
+        ["Total Invertido", formatCurrency(exportData.summary.totalInvested)],
+        ["Ganancias Totales", formatCurrency(exportData.summary.totalEarnings)],
+        ["Patrimonio Neto", formatCurrency(exportData.summary.netWorth)],
+      ];
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Métrica", "Valor"]],
+        body: summaryData,
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 10, cellPadding: 3 },
+        margin: { left: 20, right: 20 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+
+      // REFERIDOS
+      if (exportData.referrals.length > 0) {
+        // Nueva página si es necesario
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(16);
+        doc.text("REFERIDOS", 20, yPosition);
+        yPosition += 10;
+
+        const referralsData = exportData.referrals.map((ref) => [
+          ref.name,
+          ref.phone || "N/A",
+          ref.wallet.substring(0, 15) + "...",
+          ref.status,
+          `Gen ${ref.generation}`,
+          formatCurrency(ref.investmentAmount),
+          formatCurrency(ref.commission),
+          new Date(ref.joinDate).toLocaleDateString(),
+        ]);
+
+        autoTable(doc, {
+          startY: yPosition,
+          head: [
+            [
+              "Nombre",
+              "Teléfono",
+              "Wallet",
+              "Estado",
+              "Generación",
+              "Inversión",
+              "Comisión",
+              "Fecha Ingreso",
+            ],
+          ],
+          body: referralsData,
+          theme: "grid",
+          headStyles: { fillColor: [34, 197, 94] },
+          styles: { fontSize: 8, cellPadding: 2 },
+          margin: { left: 20, right: 20 },
+          pageBreak: "auto",
+        });
+
+        yPosition = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // INVERSIONES PERSONALES
+      if (exportData.investments.length > 0) {
+        // Nueva página si es necesario
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(16);
+        doc.text("INVERSIONES PERSONALES", 20, yPosition);
+        yPosition += 10;
+
+        const investmentsData = exportData.investments.map((inv) => [
+          formatCurrency(inv.amount),
+          new Date(inv.startDate).toLocaleDateString(),
+          new Date(inv.expirationDate).toLocaleDateString(),
+          formatCurrency(inv.earnings),
+          inv.status,
+          inv.cycleCount.toString(),
+        ]);
+
+        autoTable(doc, {
+          startY: yPosition,
+          head: [
+            [
+              "Monto",
+              "Fecha Inicio",
+              "Fecha Vencimiento",
+              "Ganancias",
+              "Estado",
+              "Ciclos",
+            ],
+          ],
+          body: investmentsData,
+          theme: "grid",
+          headStyles: { fillColor: [249, 115, 22] },
+          styles: { fontSize: 9, cellPadding: 3 },
+          margin: { left: 20, right: 20 },
+          pageBreak: "auto",
+        });
+      }
+
+      // Pie de página en cada página
+      const pageCount = (doc as any).getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          `Página ${i} de ${pageCount} - Bitnest Export`,
+          105,
+          doc.internal.pageSize.height - 10,
+          { align: "center" }
+        );
+      }
+
+      // Descargar PDF
+      doc.save(`bitnest_export_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+      alert("Error al exportar a PDF");
     } finally {
       setIsExporting(false);
     }
@@ -332,7 +509,7 @@ export default function ExportPage() {
             Formatos de Exportación
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Exportar a CSV */}
             <div className="p-4 border border-gray-200 rounded-lg text-center">
               <FileText className="h-12 w-12 text-green-500 mx-auto mb-3" />
@@ -381,6 +558,22 @@ export default function ExportPage() {
                 Exportar Excel
               </Button>
             </div>
+
+            {/* Exportar a PDF */}
+            <div className="p-4 border border-gray-200 rounded-lg text-center">
+              <File className="h-12 w-12 text-red-500 mx-auto mb-3" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">PDF</h3>
+              <p className="text-sm text-gray-600 mb-4">Documento imprimible</p>
+              <Button
+                onClick={exportToPDF}
+                disabled={isExporting}
+                variant="outline"
+                className="w-full"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar PDF
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -404,6 +597,9 @@ export default function ExportPage() {
             </li>
             <li>• El formato JSON es útil para análisis de datos o backups</li>
             <li>• El formato Excel incluye múltiples hojas de trabajo</li>
+            <li>
+              • El formato PDF genera un documento profesional e imprimible
+            </li>
           </ul>
         </div>
       </Card>
