@@ -7,9 +7,6 @@ import {
   Area,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -61,33 +58,6 @@ export default function AnalyticsPage() {
   const loading =
     metricsLoading || referralsLoading || investmentsLoading || leadsLoading;
 
-  // ==================== DATOS REALES DE REFERIDOS ====================
-  const generationData = useMemo(() => {
-    if (loading) return [];
-
-    const firstGenCount = metrics.firstGeneration || 0;
-    const secondGenCount = metrics.secondGeneration || 0;
-
-    return [
-      {
-        name: "Primera Generación",
-        value: firstGenCount,
-        color: "#0ea5e9",
-        investment: referrals
-          .filter((r: any) => r.generation === 1)
-          .reduce((sum: number, r: any) => sum + r.amount, 0),
-      },
-      {
-        name: "Segunda Generación",
-        value: secondGenCount,
-        color: "#f59e0b",
-        investment: referrals
-          .filter((r: any) => r.generation === 2)
-          .reduce((sum: number, r: any) => sum + r.amount, 0),
-      },
-    ].filter((item) => item.value > 0);
-  }, [metrics, referrals, loading]);
-
   // ==================== DISTRIBUCIÓN DE INVERSIONES POR RANGO ====================
   const investmentRanges = useMemo(() => {
     if (loading) return [];
@@ -119,33 +89,27 @@ export default function AnalyticsPage() {
   const earningsTrend = useMemo(() => {
     if (loading) return [];
 
-    // Agrupar por mes basado en fechas de inicio
     const monthlyData: {
       [key: string]: { personal: number; referrals: number };
     } = {};
 
-    // Procesar inversiones personales
     investments.forEach((inv: any) => {
-      const month = inv.startDate.substring(0, 7); // YYYY-MM
-      if (!monthlyData[month]) {
+      const month = inv.startDate.substring(0, 7);
+      if (!monthlyData[month])
         monthlyData[month] = { personal: 0, referrals: 0 };
-      }
       monthlyData[month].personal += inv.earnings || 0;
     });
 
-    // Procesar ingresos por referidos
     referrals.forEach((ref: any) => {
-      const month = ref.startDate.substring(0, 7); // YYYY-MM
-      if (!monthlyData[month]) {
+      const month = ref.startDate.substring(0, 7);
+      if (!monthlyData[month])
         monthlyData[month] = { personal: 0, referrals: 0 };
-      }
       monthlyData[month].referrals += ref.userIncome || 0;
     });
 
-    // Convertir a array y formatear
     return Object.entries(monthlyData)
       .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6) 
+      .slice(-6)
       .map(([month, data]) => ({
         month: new Date(month + "-01").toLocaleDateString("es-ES", {
           month: "short",
@@ -163,7 +127,7 @@ export default function AnalyticsPage() {
 
     const currentReferrals = metrics.totalReferrals;
     const currentEarnings = metrics.monthlyEarnings;
-    const growthRate = 0.15; 
+    const growthRate = 0.15;
 
     return Array.from({ length: projectionMonths }, (_, i) => {
       const month = i + 1;
@@ -331,9 +295,9 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Grid Principal de Gráficos */}
+      {/* Primera fila: Proyección + Tendencia de Ingresos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Proyección de Crecimiento con Datos Reales */}
+        {/* Proyección de Crecimiento */}
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Target className="h-5 w-5 mr-2 text-primary-600" />
@@ -374,70 +338,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Distribución por Generaciones */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Users className="h-5 w-5 mr-2 text-primary-600" />
-            Distribución por Generaciones
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={generationData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                dataKey="value"
-                label={({ name, value }) => `${name}: ${value}`}
-              >
-                {generationData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value, name, props) => {
-                  const item = generationData.find((d) => d.value === value);
-                  return [
-                    `${value} referidos (${formatCurrency(
-                      item?.investment || 0
-                    )})`,
-                    name,
-                  ];
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-4 space-y-2">
-            {generationData.map((item) => (
-              <div
-                key={item.name}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center">
-                  <div
-                    className="w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {item.name}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold">{item.value} referidos</span>
-                  <div className="text-xs text-gray-500">
-                    {formatCurrency(item.investment)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Segunda Fila de Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tendencia de Ingresos Real */}
+        {/* Tendencia de Ingresos Mensuales */}
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary-600" />
@@ -471,7 +372,10 @@ export default function AnalyticsPage() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      </div>
 
+      {/* Segunda fila: Distribución de Inversiones + Top Referidos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Distribución de Inversiones por Rango */}
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -506,12 +410,9 @@ export default function AnalyticsPage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
 
-      {/* Top Referidos y Componentes Adicionales */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Referidos por Rendimiento */}
-        <div className="card p-6 lg:col-span-1">
+        <div className="card p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Zap className="h-5 w-5 mr-2 text-primary-600" />
             Top Referidos por Rendimiento
@@ -549,15 +450,15 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </div>
-
-        {/* Componentes Adicionales */}
-        <div className="lg:col-span-2 space-y-6">
-          <PerformanceMetrics />
-          <ProjectionCards />
-        </div>
       </div>
 
-      {/* Componentes de Gráficos Especializados */}
+      {/* Tercera fila: Componentes adicionales (Performance + Proyecciones) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <PerformanceMetrics />
+        <ProjectionCards />
+      </div>
+
+      {/* Cuarta fila: Gráficos especializados (en una sola columna en móvil, dos en desktop) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <InvestmentDistributionChart />
         <MonthlyGrowthChart />

@@ -247,7 +247,8 @@ export default function ReferralsPage() {
       </div>
 
       {/* ✅ ESTADÍSTICAS ACTUALIZADAS: Muestra dinámicamente las generaciones que tienen referidos */}
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
+      {/* ✅ ESTADÍSTICAS DINÁMICAS: Tarjetas que se adaptan al ancho disponible */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-fit">
         {/* Tarjeta de Total de Referidos */}
         <Card>
           <CardContent className="p-6">
@@ -261,7 +262,7 @@ export default function ReferralsPage() {
           </CardContent>
         </Card>
 
-        {/* ✅ GENERAR TARJETAS DINÁMICAMENTE PARA CADA GENERACIÓN CON REFERIDOS */}
+        {/* Tarjetas dinámicas por generación */}
         {Object.entries(generationStats)
           .filter(([_, count]) => count > 0)
           .map(([generation, count]) => (

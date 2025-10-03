@@ -11,10 +11,18 @@ import {
 import { useFirebaseDashboardMetrics } from "@/hooks";
 import { formatCurrency } from "@/lib/businessUtils";
 import MetricCard from "@/components/ui/MetricCard";
+import { DashboardMetrics } from "@/types"; // 👈 Importamos el tipo
 
 export default function DashboardPage() {
-  const { metrics, topReferrals, expiringToday, loading } =
-    useFirebaseDashboardMetrics();
+  const {
+    metrics: rawMetrics,
+    topReferrals,
+    expiringToday,
+    loading,
+  } = useFirebaseDashboardMetrics();
+
+  // ✅ Forzamos el tipo completo para evitar errores de TS
+  const metrics = rawMetrics as DashboardMetrics;
 
   if (loading) {
     return (
@@ -203,23 +211,56 @@ export default function DashboardPage() {
 
       {/* Métricas Secundarias */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+        {/* ✅ SECCIÓN DE GENERACIONES ACTUALIZADA */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-base font-semibold text-gray-900 mb-3">
             Generaciones
           </h3>
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Primera Generación</span>
-              <span className="font-medium">
-                {metrics.firstGeneration} referidos
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Segunda Generación</span>
-              <span className="font-medium">
-                {metrics.secondGeneration} referidos
-              </span>
-            </div>
+            {[
+              {
+                key: "firstGeneration",
+                label: "Primera Generación",
+                value: metrics.firstGeneration,
+              },
+              {
+                key: "secondGeneration",
+                label: "Segunda Generación",
+                value: metrics.secondGeneration,
+              },
+              {
+                key: "thirdGeneration",
+                label: "Tercera Generación",
+                value: metrics.thirdGeneration,
+              },
+              {
+                key: "fourthGeneration",
+                label: "Cuarta Generación",
+                value: metrics.fourthGeneration,
+              },
+              {
+                key: "fifthGeneration",
+                label: "Quinta Generación",
+                value: metrics.fifthGeneration,
+              },
+              {
+                key: "sixthGeneration",
+                label: "Sexta Generación",
+                value: metrics.sixthGeneration,
+              },
+              {
+                key: "seventhGeneration",
+                label: "Séptima Generación",
+                value: metrics.seventhGeneration,
+              },
+            ]
+              .filter((item) => item.value > 0)
+              .map((item) => (
+                <div key={item.key} className="flex justify-between text-sm">
+                  <span className="text-gray-600">{item.label}</span>
+                  <span className="font-medium">{item.value} referidos</span>
+                </div>
+              ))}
             <div className="border-t pt-2 mt-2">
               <div className="flex justify-between font-semibold text-sm">
                 <span>Total</span>
@@ -231,7 +272,7 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="text-base font-semibold text-gray-900 mb-3">
-            Leads Activos
+            Personas int
           </h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
