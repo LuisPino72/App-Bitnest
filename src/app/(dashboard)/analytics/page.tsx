@@ -34,6 +34,8 @@ import {
   formatCurrency,
   getLeadStats,
   calculateGenerationMetrics,
+  getUniqueReferrals,
+  getActiveReferralPersons,
 } from "@/lib/businessUtils";
 import { InvestmentDistributionChart } from "@/components/analytics/InvestmentDistributionChart";
 import { MonthlyGrowthChart } from "@/components/analytics/MonthlyGrowthChart";
@@ -58,7 +60,15 @@ export default function AnalyticsPage() {
   const loading =
     metricsLoading || referralsLoading || investmentsLoading || leadsLoading;
 
-  // ==================== DISTRIBUCIÓN DE INVERSIONES POR RANGO ====================
+  // ==================== REFERIDOS ÚNICOS Y ACTIVOS ====================
+  const totalUniqueReferrals = useMemo(
+    () => getUniqueReferrals(referrals).length,
+    [referrals]
+  );
+  const activeReferralPersons = useMemo(
+    () => getActiveReferralPersons(referrals).length,
+    [referrals]
+  );
   const investmentRanges = useMemo(() => {
     if (loading) return [];
 
@@ -179,7 +189,7 @@ export default function AnalyticsPage() {
         change: roiPercentage > 20 ? "positive" : "negative",
       },
       {
-        title: "Tasa Conversión Leads",
+        title: "Tasa Conversión de personas",
         value: `${leadStats.conversionRate.toFixed(1)}%`,
         description: `${leadStats.interested} de ${leadStats.total} leads`,
         icon: Users,
@@ -220,28 +230,31 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando análisis...</p>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg mt-4">
+            Análisis de Rendimiento
+          </h1>
+          <p className="mt-2 text-gray-500 text-base animate-pulse">
+            Cargando análisis...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in py-8 px-2 md:px-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Análisis de Rendimiento
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Métricas reales y proyecciones basadas en tus datos actuales
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg">
+          Análisis de Rendimiento
+        </h1>
+        <p className="text-gray-500 text-base mt-2">
+          Métricas reales y proyecciones basadas en tus datos actuales
+        </p>
+        <div className="flex justify-center mt-4">
           <select
             value={projectionMonths}
             onChange={(e) => setProjectionMonths(Number(e.target.value))}
@@ -255,15 +268,18 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Métricas Clave en Tiempo Real */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mb-8">
         {performanceMetrics.map((metric, index) => (
-          <div key={index} className="card p-6">
+          <div
+            key={index}
+            className="rounded-2xl border bg-white shadow-lg p-6"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
+                <p className="text-base font-medium text-gray-600">
                   {metric.title}
                 </p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-2xl font-extrabold text-gray-900 mt-1">
                   {metric.value}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -296,10 +312,10 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Primera fila: Proyección + Tendencia de Ingresos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto mb-8">
         {/* Proyección de Crecimiento */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <div className="rounded-2xl border bg-white shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
             <Target className="h-5 w-5 mr-2 text-primary-600" />
             Proyección de Crecimiento ({projectionMonths} meses)
           </h3>
@@ -339,8 +355,8 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Tendencia de Ingresos Mensuales */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <div className="rounded-2xl border bg-white shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
             <TrendingUp className="h-5 w-5 mr-2 text-primary-600" />
             Tendencia de Ingresos Mensuales
           </h3>
@@ -375,10 +391,10 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Segunda fila: Distribución de Inversiones + Top Referidos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto mb-8">
         {/* Distribución de Inversiones por Rango */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <div className="rounded-2xl border bg-white shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
             <DollarSign className="h-5 w-5 mr-2 text-primary-600" />
             Distribución de Inversiones por Rango
           </h3>
@@ -412,8 +428,8 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Top Referidos por Rendimiento */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <div className="rounded-2xl border bg-white shadow-lg p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
             <Zap className="h-5 w-5 mr-2 text-primary-600" />
             Top Referidos por Rendimiento
           </h3>
@@ -421,7 +437,7 @@ export default function AnalyticsPage() {
             {topPerformers.map((performer: any) => (
               <div
                 key={performer.rank}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 via-gray-50 to-orange-50 rounded-xl shadow-sm"
               >
                 <div className="flex items-center">
                   <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center mr-3">
@@ -453,13 +469,13 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tercera fila: Componentes adicionales (Performance + Proyecciones) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto mb-8">
         <PerformanceMetrics />
         <ProjectionCards />
       </div>
 
       {/* Cuarta fila: Gráficos especializados (en una sola columna en móvil, dos en desktop) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto mb-8">
         <InvestmentDistributionChart />
         <MonthlyGrowthChart />
       </div>

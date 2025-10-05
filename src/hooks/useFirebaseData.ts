@@ -16,65 +16,94 @@ import {
   getTopReferrals,
   getExpiringToday,
 } from "@/lib/businessUtils";
+import { useFirestoreCollection } from "./useFirestoreCollection";
 
 // Hook para referidos
 export const useFirebaseReferrals = () => {
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = ReferralService.subscribe((data) => {
-      setReferrals(data);
-      setLoading(false);
-      setError(null);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const {
+    items: referrals,
+    loading,
+    error,
+    create,
+    update,
+    remove,
+  } = useFirestoreCollection<Referral>(ReferralService as any);
 
   const addReferral = useCallback(
     async (referralData: Omit<Referral, "id">) => {
+      // Business logic: calcular earnings antes de crear
       try {
-        setError(null);
-        await ReferralService.create(referralData);
+        const earnings = referralData.amount * 0.24; 
+        const userIncome =
+          earnings *
+          (referralData.generation === 1
+            ? 0.2
+            : referralData.generation === 2
+            ? 0.1
+            : 0.05);
+        const newReferral = {
+          ...referralData,
+          earnings,
+          userIncome,
+          totalEarned: earnings,
+        } as Omit<Referral, "id">;
+        return await create(newReferral);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error adding referral");
         throw err;
       }
     },
-    []
+    [create]
   );
 
   const updateReferral = useCallback(
     async (id: string, updates: Partial<Referral>) => {
+      // si se actualiza amount/generation recalcular
       try {
-        setError(null);
-        await ReferralService.update(id, updates);
+        if (updates.amount !== undefined || updates.generation !== undefined) {
+          // Obtener el referral actual para recalcular correctamente
+          const current = referrals.find((r) => r.id === id);
+          if (current) {
+            const newAmount = updates.amount ?? current.amount;
+            const newGeneration = updates.generation ?? current.generation;
+            const earnings =
+              require("@/lib/businessUtils").calculateReferralEarnings(
+                newAmount
+              );
+            const userIncome =
+              require("@/lib/businessUtils").calculateUserIncome(
+                earnings,
+                newGeneration
+              );
+            const totalEarned = earnings;
+            await update(id, {
+              ...updates,
+              earnings,
+              userIncome,
+              totalEarned,
+            } as Partial<Referral>);
+          } else {
+            await update(id, updates as Partial<Referral>);
+          }
+        } else {
+          await update(id, updates as Partial<Referral>);
+        }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Error updating referral"
-        );
         throw err;
       }
     },
-    []
+    [update, referrals]
   );
 
-  const deleteReferral = useCallback(async (id: string) => {
-    try {
-      setError(null);
-      await ReferralService.delete(id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error deleting referral");
-      throw err;
-    }
-  }, []);
+  const deleteReferral = useCallback(
+    async (id: string) => {
+      return await remove(id);
+    },
+    [remove]
+  );
 
   const getReferralsByGeneration = useCallback(
-    (generation: Generation): Referral[] => {
-      return referrals.filter((referral) => referral.generation === generation);
-    },
+    (generation: Generation) =>
+      referrals.filter((r) => r.generation === generation),
     [referrals]
   );
 
@@ -91,47 +120,101 @@ export const useFirebaseReferrals = () => {
 
 // Hook para inversiones personales 
 export const useFirebasePersonalInvestments = () => {
-  const [investments, setInvestments] = useState<PersonalInvestment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    items: investments,
+    loading,
+    error,
+    create,
+    update,
+    remove,
+  } = useFirestoreCollection<PersonalInvestment>(
+    PersonalInvestmentService as any
+  );
 
-  useEffect(() => {
-    const unsubscribe = PersonalInvestmentService.subscribe((data) => {
-      setInvestments(data);
-      setLoading(false);
-      setError(null);
-    });
+  const addInvestment = useCallback(
+    async (investmentData: Omit<PersonalInvestment, "id">) => {
+      try {
+        const earnings = investmentData.amount * 0.24;
+        const newInvestment = {
+          ...investmentData,
+          earnings,
+          totalEarned: earnings,
+        } as Omit<PersonalInvestment, "id">;
+        return await create(newInvestment);
+      } catch (err) {
+        throw err;
+      }
+    },
+    [create]
+  );
 
-    return () => unsubscribe();
-  }, []);
+  const updateInvestment = useCallback(
+    async (id: string, updates: Partial<PersonalInvestment>) => {
+      try {
+        await update(id, updates as Partial<PersonalInvestment>);
+      } catch (err) {
+        throw err;
+      }
+    },
+    [update]
+  );
+
+  const deleteInvestment = useCallback(
+    async (id: string) => remove(id),
+    [remove]
+  );
+
+  const getActiveInvestments = useCallback(
+    () => investments.filter((i) => i.status === "active"),
+    [investments]
+  );
 
   return {
     investments,
     loading,
     error,
+    addInvestment,
+    updateInvestment,
+    deleteInvestment,
+    getActiveInvestments,
   };
 };
 
-// Hook para leads 
+// Hook para personas contactadas
 export const useFirebaseLeads = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    items: leads,
+    loading,
+    error,
+    create,
+    update,
+    remove,
+  } = useFirestoreCollection<Lead>(LeadService as any);
 
-  useEffect(() => {
-    const unsubscribe = LeadService.subscribe((data) => {
-      setLeads(data);
-      setLoading(false);
-      setError(null);
-    });
+  const addLead = useCallback(
+    async (leadData: Omit<Lead, "id">) => create(leadData),
+    [create]
+  );
+  const updateLead = useCallback(
+    async (id: string, updates: Partial<Lead>) => update(id, updates),
+    [update]
+  );
+  const deleteLead = useCallback(async (id: string) => remove(id), [remove]);
 
-    return () => unsubscribe();
-  }, []);
+  const getLeadsByStatus = useCallback(
+    (status: "interested" | "doubtful" | "rejected") =>
+      leads.filter((l) => l.status === status),
+    [leads]
+  );
 
   return {
     leads,
     loading,
     error,
+    addLead,
+    updateLead,
+    deleteLead,
+    getLeadsByStatus,
   };
 };
 

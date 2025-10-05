@@ -3,4 +3,4 @@ export {
   useFirebasePersonalInvestments,
   useFirebaseLeads,
   useFirebaseDashboardMetrics,
-} from "./firebaseHooks";
+} from "./useFirebaseData";

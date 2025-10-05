@@ -172,7 +172,7 @@ export function InvestmentDistributionChart() {
           </ResponsiveContainer>
         </div>
 
-        {/* ✅ ACTUALIZADO: Lista detallada de generaciones */}
+        {/* Lista detallada de generaciones */}
         <div className="mt-6 space-y-3 max-h-60 overflow-y-auto">
           {data.map((item, index) => (
             <div
@@ -206,7 +206,7 @@ export function InvestmentDistributionChart() {
           ))}
         </div>
 
-        {/* ✅ NUEVO: Resumen total */}
+        {/*  Resumen total */}
         <div className="mt-4 p-3 bg-primary-50 rounded-lg border border-primary-200">
           <div className="flex justify-between items-center">
             <div>

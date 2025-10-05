@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface SelectProps {
-  value?: string | undefined; // ✅ Agregar | undefined explícitamente
+  value?: string | undefined; 
   onValueChange?: (value: string) => void;
   children: React.ReactNode;
 }

@@ -9,10 +9,22 @@ import {
   ReferralCalculatorResult,
   Generation,
 } from "@/types";
-import { BUSINESS_CONSTANTS, getCommissionRate } from "@/types/constants";
+import {
+  BUSINESS_CONSTANTS,
+  getCommissionRate,
+  HISTORICAL_EARNINGS,
+} from "@/types/constants";
 
 // ==================== UTILIDADES DE FECHA ====================
-export const getTodayISO = (): string => new Date().toISOString().split("T")[0];
+// Devuelve la fecha actual en UTC-04:00 (Venezuela/Caracas)
+export const getTodayISO = (): string => {
+  const now = new Date();
+  // Ajustar a UTC-04:00
+  const utcMinus4 = new Date(
+    now.getTime() - (now.getTimezoneOffset() + 240) * 60000
+  );
+  return utcMinus4.toISOString().split("T")[0];
+};
 
 export const formatDate = (date: string): string => {
   if (!date) return "";
@@ -21,9 +33,13 @@ export const formatDate = (date: string): string => {
 };
 
 export const addDays = (date: string, days: number): string => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result.toISOString().split("T")[0];
+  const d = new Date(date);
+  // Ajustar a UTC-04:00
+  const utcMinus4 = new Date(
+    d.getTime() - (d.getTimezoneOffset() + 240) * 60000
+  );
+  utcMinus4.setDate(utcMinus4.getDate() + days);
+  return utcMinus4.toISOString().split("T")[0];
 };
 
 export const isToday = (date: string): boolean => date === getTodayISO();
@@ -106,95 +122,70 @@ export const calculateDashboardMetrics = (
   const today = currentDate || getTodayISO();
   const thirtyDaysAgo = addDays(today, -30);
   const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
-
   const activeReferrals = getActiveReferrals(referrals);
   const activeInvestments = getActiveInvestments(personalInvestments);
-  const activeReferralPersons = getActiveReferralPersons(referrals);
 
-  // ✅ Agrega filtros para todas las generaciones
-  const firstGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 1
-  );
-  const secondGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 2
-  );
-  const thirdGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 3
-  );
-  const fourthGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 4
-  );
-  const fifthGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 5
-  );
-  const sixthGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 6
-  );
-  const seventhGenReferrals = activeReferralPersons.filter(
-    (r) => r.generation === 7
-  );
+  // Reducir en una sola pasada para calcular agregados
+  const initial = {
+    totalPersonalInvestments: 0,
+    totalReferralInvestments: 0,
+    referralIncome: 0,
+    personalEarnings: 0,
+    referralMonthlyEarnings: 0,
+    investmentMonthlyEarnings: 0,
+    byGeneration: [0, 0, 0, 0, 0, 0, 0] as number[],
+    expiringTodayCount: 0,
+  };
 
-  const interestedLeads = leads.filter((l) => l.status === "interested");
+  // Procesar referridos
+  activeReferrals.forEach((r) => {
+    initial.totalReferralInvestments += r.amount;
+    initial.referralIncome += r.userIncome || 0;
 
-  // Cálculos de inversiones
-  const totalPersonalInvestments = activeInvestments.reduce(
-    (sum, inv) => sum + inv.amount,
-    0
-  );
-  const totalReferralInvestments = activeReferrals.reduce(
-    (sum, r) => sum + r.amount,
-    0
-  );
-  const totalInvestments = totalPersonalInvestments + totalReferralInvestments;
+    const genIndex = Math.max(1, Math.min(7, r.generation)) - 1;
+    initial.byGeneration[genIndex] = (initial.byGeneration[genIndex] || 0) + 1;
 
-  // Cálculos de ganancias
-  const referralIncome = activeReferrals.reduce(
-    (sum, r) => sum + (r.userIncome || 0),
-    0
-  );
-  const personalEarnings = activeInvestments.reduce(
-    (sum, inv) => sum + (inv.earnings || 0),
-    0
-  );
-  const totalEarnings = referralIncome + personalEarnings + HISTORICAL_EARNINGS;
+    const refDate = new Date(r.startDate || r.investmentDate);
+    if (refDate >= thirtyDaysAgoDate) {
+      initial.referralMonthlyEarnings += r.userIncome || 0;
+    }
 
-  // CÁLCULO DE monthlyEarnings:
-  const referralMonthlyEarnings = activeReferrals
-    .filter((ref) => {
-      const refDate = new Date(ref.startDate || ref.investmentDate);
-      return refDate >= thirtyDaysAgoDate;
-    })
-    .reduce((sum, ref) => sum + (ref.userIncome || 0), 0);
+    if (r.expirationDate === today) initial.expiringTodayCount += 1;
+  });
 
-  const investmentMonthlyEarnings = activeInvestments
-    .filter((inv) => {
-      const invDate = new Date(inv.startDate);
-      return invDate >= thirtyDaysAgoDate;
-    })
-    .reduce((sum, inv) => sum + (inv.earnings || 0), 0);
+  // Procesar inversiones personales
+  activeInvestments.forEach((inv) => {
+    initial.totalPersonalInvestments += inv.amount;
+    initial.personalEarnings += inv.earnings || 0;
+    const invDate = new Date(inv.startDate);
+    if (invDate >= thirtyDaysAgoDate)
+      initial.investmentMonthlyEarnings += inv.earnings || 0;
+    if (inv.expirationDate === today) initial.expiringTodayCount += 1;
+  });
 
-  const monthlyEarnings = referralMonthlyEarnings + investmentMonthlyEarnings;
+  const totalInvestments =
+    initial.totalPersonalInvestments + initial.totalReferralInvestments;
+  const totalEarnings =
+    initial.referralIncome + initial.personalEarnings + HISTORICAL_EARNINGS;
+  const monthlyEarnings =
+    initial.referralMonthlyEarnings + initial.investmentMonthlyEarnings;
 
-  // Expirando hoy
-  const expiringToday = [
-    ...activeReferrals.filter((r) => r.expirationDate === today),
-    ...activeInvestments.filter((inv) => inv.expirationDate === today),
-  ].length;
+  const totalReferrals = initial.byGeneration.reduce((s, v) => s + v, 0);
 
   return {
     totalInvestments,
-    totalReferrals: activeReferralPersons.length,
-    firstGeneration: firstGenReferrals.length,
-    secondGeneration: secondGenReferrals.length,
-    thirdGeneration: thirdGenReferrals.length,
-    fourthGeneration: fourthGenReferrals.length,
-    fifthGeneration: fifthGenReferrals.length,
-    sixthGeneration: sixthGenReferrals.length,
-    seventhGeneration: seventhGenReferrals.length,
+    totalReferrals,
+    firstGeneration: initial.byGeneration[0] || 0,
+    secondGeneration: initial.byGeneration[1] || 0,
+    thirdGeneration: initial.byGeneration[2] || 0,
+    fourthGeneration: initial.byGeneration[3] || 0,
+    fifthGeneration: initial.byGeneration[4] || 0,
+    sixthGeneration: initial.byGeneration[5] || 0,
+    seventhGeneration: initial.byGeneration[6] || 0,
     totalEarnings,
     monthlyEarnings,
-    expiringToday,
-    activeLeads: interestedLeads.length,
+    expiringToday: initial.expiringTodayCount,
+    activeLeads: leads.filter((l) => l.status === "interested").length,
   };
 };
 
@@ -281,9 +272,10 @@ export const calculateProjection = (
   initialAmount: number,
   cycles: number
 ): number => {
+  const rate = 1 + BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
   let amount = initialAmount;
   for (let i = 0; i < cycles; i++) {
-    amount *= 1.24;
+    amount *= rate;
   }
   return parseFloat(amount.toFixed(2));
 };
@@ -312,7 +304,7 @@ export const formatPercentage = (value: number): string =>
 export const generateId = (prefix: string = ""): string =>
   `${prefix}${prefix ? "-" : ""}${Date.now().toString(36)}-${Math.random()
     .toString(36)
-    .substr(2, 5)}`;
+    .slice(2, 7)}`;
 
 export const isValidPhone = (phone: string): boolean =>
   /^[+]?[1-9]?[0-9]{7,15}$/.test(phone.replace(/[\s-()]/g, ""));
@@ -384,4 +376,3 @@ export function calculateGenerationMetrics(referrals: Referral[]) {
   };
 }
 
-export const HISTORICAL_EARNINGS = 433.67;

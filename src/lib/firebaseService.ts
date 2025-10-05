@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   onSnapshot,
   Unsubscribe,
 } from "firebase/firestore";
@@ -54,17 +55,34 @@ const handleFirebaseError = (
   );
 };
 
+// Helper: mapear QuerySnapshot.docs a objetos con id (tipado minimal para compatibilidad)
+const mapDocs = <T>(docs: { id: string; data: () => any }[]): T[] =>
+  docs.map((d) => ({ id: d.id, ...d.data() })) as T[];
+
 // ==================== SERVICIO BASE GENÉRICO ====================
 export class FirebaseService<T extends { id: string }> {
   constructor(private collectionName: string) {}
 
-  async getAll(): Promise<T[]> {
+  async getAll(opts?: {
+    limit?: number;
+    orderByField?: string;
+    orderDirection?: "asc" | "desc";
+  }): Promise<T[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, this.collectionName));
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as T[];
+      let q: import("firebase/firestore").Query = collection(
+        db,
+        this.collectionName
+      );
+      if (opts?.orderByField) {
+        q = query(q, orderBy(opts.orderByField, opts.orderDirection ?? "asc"));
+      }
+      if (opts?.limit ?? true) {
+        // Si no se especifica límite, usar 100 por defecto
+        const lim = opts?.limit ?? 100;
+        q = query(q, limit(lim));
+      }
+      const querySnapshot = await getDocs(q);
+      return mapDocs<T>(querySnapshot.docs as any[]);
     } catch (error) {
       return handleFirebaseError(error, "getAll", this.collectionName);
     }
@@ -121,10 +139,7 @@ export class FirebaseService<T extends { id: string }> {
         : collectionRef;
 
       return onSnapshot(q, (querySnapshot) => {
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as T[];
+        const data = mapDocs<T>(querySnapshot.docs as any[]);
         callback(data);
       });
     } catch (error) {
@@ -132,18 +147,30 @@ export class FirebaseService<T extends { id: string }> {
     }
   }
 
-  // ✅ MÉTODOS ESPECÍFICOS CON QUERIES
-  async getByField(field: string, value: unknown): Promise<T[]> {
+  // MÉTODOS ESPECÍFICOS CON QUERIES
+  async getByField(
+    field: string,
+    value: unknown,
+    opts?: {
+      limit?: number;
+      orderByField?: string;
+      orderDirection?: "asc" | "desc";
+    }
+  ): Promise<T[]> {
     try {
-      const q = query(
+      let q: import("firebase/firestore").Query = query(
         collection(db, this.collectionName),
         where(field, "==", value)
       );
+      if (opts?.orderByField) {
+        q = query(q, orderBy(opts.orderByField, opts.orderDirection ?? "asc"));
+      }
+      if (opts?.limit ?? true) {
+        const lim = opts?.limit ?? 100;
+        q = query(q, limit(lim));
+      }
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as T[];
+      return mapDocs<T>(querySnapshot.docs as any[]);
     } catch (error) {
       return handleFirebaseError(
         error,
@@ -264,7 +291,7 @@ export class LeadService {
   }
 }
 
-// ✅ EXPORTACIÓN PARA USO DIRECTO SI ES NECESARIO
+// EXPORTACIÓN PARA USO DIRECTO SI ES NECESARIO
 export const createFirebaseService = <T extends { id: string }>(
   collectionName: string
 ) => new FirebaseService<T>(collectionName);

@@ -10,7 +10,11 @@ import {
   File,
 } from "lucide-react";
 import { useFirebaseReferrals, useFirebasePersonalInvestments } from "@/hooks";
-import { formatCurrency } from "@/lib/businessUtils";
+import {
+  formatCurrency,
+  getUniqueReferrals,
+  getActiveReferralPersons,
+} from "@/lib/businessUtils";
 import { Referral, PersonalInvestment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,17 +54,20 @@ interface ExportData {
 }
 
 export default function ExportPage() {
-  const { referrals, getActiveReferrals, getTotalCommission } =
-    useFirebaseReferrals();
+  const { referrals } = useFirebaseReferrals();
   const { investments, getActiveInvestments } =
     useFirebasePersonalInvestments();
   const [isExporting, setIsExporting] = useState(false);
 
   // Calcular métricas usando useMemo para performance
   const metrics = useMemo(() => {
-    const activeReferrals = getActiveReferrals();
+    const activeReferralPersons = getActiveReferralPersons(referrals);
+    const totalUniqueReferrals = getUniqueReferrals(referrals);
     const activeInvestments = getActiveInvestments();
-    const totalCommission = getTotalCommission();
+    const totalCommission = referrals.reduce(
+      (sum, r) => sum + (r.userIncome || 0),
+      0
+    );
 
     const totalInvested = activeInvestments.reduce(
       (sum, inv) => sum + inv.amount,
@@ -73,27 +80,22 @@ export default function ExportPage() {
     );
 
     return {
-      activeReferrals,
+      activeReferralPersons,
+      totalUniqueReferrals,
       activeInvestments,
       totalCommission,
       totalInvested,
       totalEarnings,
       netWorth: totalInvested + totalEarnings,
     };
-  }, [
-    referrals,
-    investments,
-    getActiveReferrals,
-    getActiveInvestments,
-    getTotalCommission,
-  ]);
+  }, [referrals, investments, getActiveInvestments]);
 
   const prepareExportData = (): ExportData => {
     return {
       timestamp: new Date().toISOString(),
       summary: {
         totalReferrals: referrals.length,
-        activeReferrals: metrics.activeReferrals.length,
+        activeReferrals: metrics.activeReferralPersons.length,
         totalCommission: metrics.totalCommission,
         totalInvested: metrics.totalInvested,
         totalEarnings: metrics.totalEarnings,
@@ -131,17 +133,15 @@ export default function ExportPage() {
 
       // Encabezados de referidos
       csvContent +=
-        "Nombre,Email,Teléfono,Wallet,Estado,Generación,Inversión,Comisión,Fecha Ingreso,Última Comisión\n";
+        "Nombre,Email,Wallet,Estado,Generación,Inversión,Comisión,Fecha Ingreso";
 
       // Datos de referidos
       exportData.referrals.forEach((ref) => {
-        csvContent += `"${ref.name}","${ref.wallet}","${
-          ref.status
-        }","${ref.generation}","${formatCurrency(
-          ref.investmentAmount
-        )}","${formatCurrency(ref.commission)}","${ref.joinDate}","${
-          ref.lastCommissionDate || "N/A"
-        }"\n`;
+        csvContent += `"${ref.name}","${ref.wallet}","${ref.status}","${
+          ref.generation
+        }","${formatCurrency(ref.investmentAmount)}","${formatCurrency(
+          ref.commission
+        )}","${ref.joinDate}","${ref.lastCommissionDate || "N/A"}"\n`;
       });
 
       csvContent += "\n\nDATOS DE INVERSIONES\n\n";
@@ -305,7 +305,6 @@ export default function ExportPage() {
 
       // REFERIDOS
       if (exportData.referrals.length > 0) {
-        // Nueva página si es necesario
         if (yPosition > 250) {
           doc.addPage();
           yPosition = 20;
@@ -330,7 +329,6 @@ export default function ExportPage() {
           head: [
             [
               "Nombre",
-              "Teléfono",
               "Wallet",
               "Estado",
               "Generación",
@@ -352,7 +350,6 @@ export default function ExportPage() {
 
       // INVERSIONES PERSONALES
       if (exportData.investments.length > 0) {
-        // Nueva página si es necesario
         if (yPosition > 250) {
           doc.addPage();
           yPosition = 20;
@@ -436,76 +433,58 @@ export default function ExportPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Exportar Datos</h1>
-        <p className="text-gray-600 mt-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in py-8 px-2 md:px-8 space-y-6">
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg">
+          Exportar Datos
+        </h1>
+        <p className="text-gray-500 text-base mt-2">
           Exporta tus datos actuales de Firebase a diferentes formatos
         </p>
       </div>
 
       {/* Tarjetas de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Database className="h-8 w-8 text-blue-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Total Datos</p>
-                <p className="text-2xl font-bold">
-                  {referrals.length + investments.length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-green-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Referidos</p>
-                <p className="text-2xl font-bold">{referrals.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-purple-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Inversiones</p>
-                <p className="text-2xl font-bold">{investments.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-orange-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Comisión Total</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(metrics.totalCommission)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mb-8">
+        <div className="rounded-2xl border bg-white shadow-lg p-6 flex items-center">
+          <Database className="h-8 w-8 text-blue-500" />
+          <div className="ml-3">
+            <p className="text-base text-gray-600">Total Datos</p>
+            <p className="text-2xl font-bold">
+              {referrals.length + investments.length}
+            </p>
+          </div>
+        </div>
+        <div className="rounded-2xl border bg-white shadow-lg p-6 flex items-center">
+          <Users className="h-8 w-8 text-green-500" />
+          <div className="ml-3">
+            <p className="text-base text-gray-600">Referidos</p>
+            <p className="text-2xl font-bold">{referrals.length}</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border bg-white shadow-lg p-6 flex items-center">
+          <DollarSign className="h-8 w-8 text-purple-500" />
+          <div className="ml-3">
+            <p className="text-base text-gray-600">Inversiones</p>
+            <p className="text-2xl font-bold">{investments.length}</p>
+          </div>
+        </div>
+        <div className="rounded-2xl border bg-white shadow-lg p-6 flex items-center">
+          <Users className="h-8 w-8 text-orange-500" />
+          <div className="ml-3">
+            <p className="text-base text-gray-600">Comisión Total</p>
+            <p className="text-2xl font-bold">
+              {formatCurrency(metrics.totalCommission)}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Opciones de Exportación */}
-      <Card>
+      <div className="rounded-2xl border bg-white shadow-lg max-w-5xl mx-auto mb-8">
         <div className="p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Formatos de Exportación
           </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Exportar a CSV */}
             <div className="p-4 border border-gray-200 rounded-lg text-center">
@@ -517,13 +496,12 @@ export default function ExportPage() {
               <Button
                 onClick={exportToCSV}
                 disabled={isExporting}
-                className="w-full"
+                className="w-full font-bold text-base"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {isExporting ? "Exportando..." : "Exportar CSV"}
               </Button>
             </div>
-
             {/* Exportar a JSON */}
             <div className="p-4 border border-gray-200 rounded-lg text-center">
               <Database className="h-12 w-12 text-blue-500 mx-auto mb-3" />
@@ -533,13 +511,12 @@ export default function ExportPage() {
                 onClick={exportToJSON}
                 disabled={isExporting}
                 variant="outline"
-                className="w-full"
+                className="w-full font-bold text-base"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar JSON
               </Button>
             </div>
-
             {/* Exportar a Excel */}
             <div className="p-4 border border-gray-200 rounded-lg text-center">
               <FileText className="h-12 w-12 text-purple-500 mx-auto mb-3" />
@@ -549,13 +526,12 @@ export default function ExportPage() {
                 onClick={exportToExcel}
                 disabled={isExporting}
                 variant="outline"
-                className="w-full"
+                className="w-full font-bold text-base"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar Excel
               </Button>
             </div>
-
             {/* Exportar a PDF */}
             <div className="p-4 border border-gray-200 rounded-lg text-center">
               <File className="h-12 w-12 text-red-500 mx-auto mb-3" />
@@ -565,7 +541,7 @@ export default function ExportPage() {
                 onClick={exportToPDF}
                 disabled={isExporting}
                 variant="outline"
-                className="w-full"
+                className="w-full font-bold text-base"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exportar PDF
@@ -573,15 +549,15 @@ export default function ExportPage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Información adicional */}
-      <Card>
+      <div className="rounded-2xl border bg-white shadow-lg max-w-4xl mx-auto mb-8">
         <div className="p-6">
-          <h3 className="font-medium text-gray-900 mb-3">
+          <h3 className="font-bold text-gray-900 mb-3">
             Información importante
           </h3>
-          <ul className="text-sm text-gray-600 space-y-2">
+          <ul className="text-base text-gray-600 space-y-2">
             <li>
               • Los datos se obtienen directamente de Firebase en tiempo real
             </li>
@@ -599,7 +575,7 @@ export default function ExportPage() {
             </li>
           </ul>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

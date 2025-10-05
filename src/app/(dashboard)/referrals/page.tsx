@@ -7,6 +7,7 @@ import {
   formatCurrency,
   formatDate,
   getActiveReferralPersons,
+  getUniqueReferrals,
 } from "@/lib/businessUtils";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ export default function ReferralsPage() {
   const { referrals, addReferral, updateReferral, deleteReferral, loading } =
     useFirebaseReferrals();
 
-  // ✅ ACTUALIZADO: Soporte para todas las generaciones
+  // Soporte para todas las generaciones
   const [filterGeneration, setFilterGeneration] = useState<
     "all" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
   >("all");
@@ -31,9 +32,13 @@ export default function ReferralsPage() {
   const [cycleActionLoading, setCycleActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // ✅ ESTADÍSTICAS ACTUALIZADAS: Para todas las generaciones
+  // ESTADÍSTICAS Para todas las generaciones
   const activeReferralPersons = useMemo(
     () => getActiveReferralPersons(referrals),
+    [referrals]
+  );
+  const totalUniqueReferrals = useMemo(
+    () => getUniqueReferrals(referrals).length,
     [referrals]
   );
 
@@ -58,9 +63,7 @@ export default function ReferralsPage() {
     return stats;
   }, [activeReferralPersons]);
 
-  const totalUniqueReferrals = new Set(referrals.map((r) => r.wallet)).size;
-
-  // ✅ FILTRADO ACTUALIZADO: Soporta todas las generaciones
+  // FILTRADO Soporta todas las generaciones
   const filteredReferrals = useMemo(() => {
     return referrals
       .filter((referral) => {
@@ -85,7 +88,7 @@ export default function ReferralsPage() {
       });
   }, [referrals, filterGeneration, filterStatus, searchTerm]);
 
-  // ✅ HANDLERS ACTUALIZADOS: Cálculo correcto para todas las generaciones
+  // HANDLERSCálculo correcto para todas las generaciones
   const handleFinishCycle = async (referralId: string) => {
     setCycleActionLoading(true);
     await updateReferral(referralId, { status: "completed" });
@@ -104,7 +107,7 @@ export default function ReferralsPage() {
     );
     const newEarnings = parseFloat((newAmount * 0.24).toFixed(2));
 
-    // ✅ CÁLCULO CORRECTO PARA TODAS LAS GENERACIONES
+    // CÁLCULO PARA TODAS LAS GENERACIONES
     const commissionRates = {
       1: 0.2,
       2: 0.1,
@@ -146,7 +149,7 @@ export default function ReferralsPage() {
     }
   };
 
-  // ✅ FUNCIÓN MEJORADA: Badge de generación con colores para todas las generaciones
+  //  Badge de generación con colores para todas las generaciones
   const getGenerationBadge = (generation: number) => {
     const baseClasses =
       "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium";
@@ -165,7 +168,7 @@ export default function ReferralsPage() {
       colors[generation as keyof typeof colors] || "bg-gray-100 text-gray-800";
 
     return (
-      <span className={`${baseClasses} ${colorClass}`}>Gen {generation}</span>
+      <span className={`${baseClasses} ${colorClass}`}>Generación {generation}</span>
     );
   };
 
@@ -203,127 +206,113 @@ export default function ReferralsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Referidos</h1>
-            <p className="text-gray-600 mt-2">Cargando...</p>
-          </div>
-          <Button disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva inversión
-          </Button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in">
+        <div className="mb-4 text-center">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg">
+            Referidos
+          </h1>
+          <p className="text-gray-500 text-base mt-2 animate-pulse">
+            Cargando...
+          </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-4xl">
           {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              </CardContent>
-            </Card>
+            <div
+              key={i}
+              className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 animate-pulse rounded-xl h-28 shadow-lg"
+            ></div>
           ))}
         </div>
       </div>
     );
   }
-
   return (
-    <div className="space-y-6 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in py-8 px-2 md:px-8 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Referidos</h1>
-          <p className="text-gray-600 mt-2">
-            Gestiona tu red de referidos y sus inversiones
-          </p>
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg">
+          Referidos
+        </h1>
+        <p className="text-gray-500 text-base mt-2">
+          Gestiona tu red de referidos y sus inversiones
+        </p>
+        <div className="flex justify-center mt-4">
+          <Button
+            onClick={() => setShowForm(true)}
+            className="font-bold text-base"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nueva inversión
+          </Button>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva inversión
-        </Button>
       </div>
 
-      {/* ✅ ESTADÍSTICAS ACTUALIZADAS: Muestra dinámicamente las generaciones que tienen referidos */}
-      {/* ✅ ESTADÍSTICAS DINÁMICAS: Tarjetas que se adaptan al ancho disponible */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-fit">
+      {/* Estadísticas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-6xl mx-auto mb-8">
         {/* Tarjeta de Total de Referidos */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-blue-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Total Referidos</p>
-                <p className="text-2xl font-bold">{totalUniqueReferrals}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border bg-white shadow-lg p-6 flex items-center">
+          <Users className="h-8 w-8 text-blue-500" />
+          <div className="ml-3">
+            <p className="text-base text-gray-600">Total Referidos</p>
+            <p className="text-2xl font-bold">{totalUniqueReferrals}</p>
+          </div>
+        </div>
 
         {/* Tarjetas dinámicas por generación */}
         {Object.entries(generationStats)
           .filter(([_, count]) => count > 0)
           .map(([generation, count]) => (
-            <Card key={generation}>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <Users
-                    className={`h-8 w-8 ${
-                      generation === "1"
-                        ? "text-green-500"
-                        : generation === "2"
-                        ? "text-yellow-500"
-                        : generation === "3"
-                        ? "text-purple-500"
-                        : generation === "4"
-                        ? "text-pink-500"
-                        : generation === "5"
-                        ? "text-indigo-500"
-                        : generation === "6"
-                        ? "text-orange-500"
-                        : "text-red-500"
-                    }`}
-                  />
-                  <div className="ml-3">
-                    <p className="text-sm text-gray-600">Gen {generation}</p>
-                    <p className="text-2xl font-bold">{count}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div
+              key={generation}
+              className="rounded-2xl border bg-white shadow-lg p-6 flex items-center"
+            >
+              <Users
+                className={`h-8 w-8 ${
+                  generation === "1"
+                    ? "text-green-500"
+                    : generation === "2"
+                    ? "text-yellow-500"
+                    : generation === "3"
+                    ? "text-purple-500"
+                    : generation === "4"
+                    ? "text-pink-500"
+                    : generation === "5"
+                    ? "text-indigo-500"
+                    : generation === "6"
+                    ? "text-orange-500"
+                    : "text-red-500"
+                }`}
+              />
+              <div className="ml-3">
+                <p className="text-base text-gray-600">Geneneración {generation}</p>
+                <p className="text-2xl font-bold">{count}</p>
+              </div>
+            </div>
           ))}
 
         {/* Tarjeta de Total Activos */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-red-500" />
-              <div className="ml-3">
-                <p className="text-sm text-gray-600">Activos</p>
-                <p className="text-2xl font-bold">
-                  {activeReferralPersons.length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border bg-white shadow-lg p-6 flex items-center">
+          <Users className="h-8 w-8 text-red-500" />
+          <div className="ml-3">
+            <p className="text-base text-gray-600">Activos</p>
+            <p className="text-2xl font-bold">{activeReferralPersons.length}</p>
+          </div>
+        </div>
       </div>
 
-      {/* ✅ FILTROS ACTUALIZADOS: Selector de generación con todas las opciones */}
-      <Card>
-        <CardContent className="p-6">
+      {/* Filtros */}
+      <div className="rounded-2xl border bg-white shadow-lg max-w-5xl mx-auto mb-8">
+        <div className="p-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 max-w-md">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Buscar por nombre o billetera"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
                 />
               </div>
             </div>
@@ -331,7 +320,7 @@ export default function ReferralsPage() {
               <select
                 value={filterGeneration}
                 onChange={(e) => setFilterGeneration(e.target.value as any)}
-                className="block w-full max-w-xs pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full max-w-xs pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
               >
                 <option value="all">Todas las generaciones</option>
                 <option value="1">Primera generación</option>
@@ -345,7 +334,7 @@ export default function ReferralsPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="block w-full max-w-xs pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full max-w-xs pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
               >
                 <option value="all">Todos los estados</option>
                 <option value="active">Activo</option>
@@ -353,46 +342,49 @@ export default function ReferralsPage() {
               </select>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Tabla de Referidos */}
-      <Card>
+      <div className="rounded-2xl border bg-white shadow-lg max-w-6xl mx-auto mb-8">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase">
                   Referido
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Generación
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Inversión
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Ganancias
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Tu Ingreso
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Estado
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Vencimiento
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase">
                   Acciones
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredReferrals.map((referral) => (
-                <tr key={referral.id} className="hover:bg-gray-50">
+                <tr
+                  key={referral.id}
+                  className="hover:bg-gray-50 transition-all"
+                >
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">
+                    <div className="font-bold text-gray-900">
                       {referral.name}
                     </div>
                     <div className="text-xs text-gray-500 truncate max-w-[120px]">
@@ -402,13 +394,13 @@ export default function ReferralsPage() {
                   <td className="px-3 py-2 whitespace-nowrap text-center">
                     {getGenerationBadge(referral.generation)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center font-medium">
+                  <td className="px-3 py-2 whitespace-nowrap text-center font-bold">
                     {formatCurrency(referral.amount)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center text-green-600">
+                  <td className="px-3 py-2 whitespace-nowrap text-center text-green-600 font-bold">
                     {formatCurrency(referral.earnings)}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-center font-medium text-blue-600">
+                  <td className="px-3 py-2 whitespace-nowrap text-center font-bold text-blue-600">
                     {formatCurrency(referral.userIncome)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-center">
@@ -450,8 +442,10 @@ export default function ReferralsPage() {
 
         {filteredReferrals.length === 0 && (
           <div className="text-center py-12">
-            <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500 text-lg">No se encontraron referidos</p>
+            <Users className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-500 text-lg font-bold">
+              No se encontraron referidos
+            </p>
             <p className="text-gray-400 mt-1">
               {searchTerm
                 ? "Intenta con otros términos de búsqueda"
@@ -459,7 +453,7 @@ export default function ReferralsPage() {
             </p>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Modales */}
       {showForm && (

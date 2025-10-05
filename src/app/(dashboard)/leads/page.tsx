@@ -116,29 +116,21 @@ export default function LeadsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Gestión de personas contactadas
-            </h1>
-            <p className="text-gray-600 mt-1">Cargando...</p>
-          </div>
-          <Button disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva persona
-          </Button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in">
+        <div className="mb-4 text-center">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg">
+            Gestión de personas contactadas
+          </h1>
+          <p className="text-gray-500 text-base mt-2 animate-pulse">
+            Cargando...
+          </p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-4xl">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="shadow-sm">
-              <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              </CardContent>
-            </Card>
+            <div
+              key={i}
+              className="bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 animate-pulse rounded-xl h-28 shadow-lg"
+            ></div>
           ))}
         </div>
       </div>
@@ -146,50 +138,49 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in py-8 px-2 md:px-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de personas contactadas</h1>
-          <p className="text-gray-600 mt-1">
-            Administra y sigue tu pipeline de contactos
-          </p>
+      <div className="mb-6 text-center">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 tracking-tight drop-shadow-lg">
+          Gestión de personas contactadas
+        </h1>
+        <p className="text-gray-500 text-base mt-2">
+          Administra y sigue tu pipeline de contactos
+        </p>
+        <div className="flex justify-center mt-4">
+          <Button
+            onClick={() => setShowForm(true)}
+            className="font-bold text-base"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nueva persona
+          </Button>
         </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nueva persona
-        </Button>
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-8">
         {stats.map((stat, index) => (
-          <Card key={index} className="shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stat.count}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-full ${stat.bg}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div
+            key={index}
+            className="rounded-2xl border bg-white shadow-lg p-6 flex items-center justify-between"
+          >
+            <div>
+              <p className="text-base font-medium text-gray-600 mb-1">
+                {stat.title}
+              </p>
+              <p className="text-2xl font-bold text-gray-900">{stat.count}</p>
+            </div>
+            <div className={`p-3 rounded-full ${stat.bg}`}>
+              <stat.icon className={`h-6 w-6 ${stat.color}`} />
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Panel Principal */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
+      <div className="rounded-2xl border bg-white shadow-lg max-w-6xl mx-auto mb-8">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Tabs */}
             <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
@@ -199,13 +190,13 @@ export default function LeadsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-base font-bold transition-colors ${
                       activeTab === tab.id
                         ? "bg-white text-gray-900 shadow-sm"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
-                    <tab.icon className={`h-4 w-4 ${tab.color}`} />
+                    <tab.icon className={`h-5 w-5 ${tab.color}`} />
                     {tab.label}
                     <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
                       {leadsCount}
@@ -217,31 +208,31 @@ export default function LeadsPage() {
 
             {/* Búsqueda */}
             <div className="relative w-full lg:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Buscar persona..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
               />
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent>
+        <div className="p-6">
           {filteredLeads.length > 0 ? (
             <div className="grid gap-4">
               {filteredLeads.map((lead) => (
                 <div
                   key={lead.id}
-                  className={`border-l-4 rounded-lg p-4 transition-all hover:shadow-md ${getStatusColor(
+                  className={`border-l-4 rounded-xl p-4 transition-all hover:shadow-lg ${getStatusColor(
                     lead.status
                   )}`}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-gray-900 text-lg">
+                      <h3 className="font-bold text-gray-900 text-lg">
                         {lead.name}
                       </h3>
                       <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">
@@ -257,14 +248,12 @@ export default function LeadsPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-
                   {lead.notes && (
                     <div className="flex items-start gap-2 mb-4">
                       <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-gray-600 text-sm">{lead.notes}</p>
+                      <p className="text-gray-600 text-base">{lead.notes}</p>
                     </div>
                   )}
-
                   <div className="flex gap-2 flex-wrap">
                     {tabs
                       .filter((tab) => tab.id !== lead.status)
@@ -276,9 +265,9 @@ export default function LeadsPage() {
                           onClick={() =>
                             updateLead(lead.id, { status: tab.id })
                           }
-                          className="text-xs"
+                          className="text-xs font-bold"
                         >
-                          <tab.icon className={`h-3 w-3 mr-1 ${tab.color}`} />
+                          <tab.icon className={`h-4 w-4 mr-1 ${tab.color}`} />
                           Mover a {tab.label}
                         </Button>
                       ))}
@@ -289,10 +278,10 @@ export default function LeadsPage() {
           ) : (
             <div className="text-center py-12">
               <UserPlus className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg font-medium">
+              <p className="text-gray-500 text-lg font-bold">
                 {searchTerm
-                  ? "No se encontraron leads"
-                  : "No hay leads en esta categoría"}
+                  ? "No se encontraron personas"
+                  : "No hay personas en esta categoría"}
               </p>
               <p className="text-gray-400 mt-1">
                 {searchTerm
@@ -300,15 +289,18 @@ export default function LeadsPage() {
                   : "Comienza agregando nuevas personas"}
               </p>
               {!searchTerm && (
-                <Button onClick={() => setShowForm(true)} className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button
+                  onClick={() => setShowForm(true)}
+                  className="mt-4 font-bold text-base"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
                   Agregar Primer Lead
                 </Button>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Modal de Formulario */}
       {showForm && <AddLeadForm onSuccess={() => setShowForm(false)} />}

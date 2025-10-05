@@ -34,3 +34,6 @@ export const getCommissionRate = (generation: Generation): number => {
       return 0;
   }
 };
+
+// Valor histórico
+export const HISTORICAL_EARNINGS = 433.67;

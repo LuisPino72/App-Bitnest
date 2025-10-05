@@ -10,7 +10,7 @@ export function ProjectionCards() {
 
   const currentMonthlyIncome = metrics.monthlyEarnings;
   const totalReferrals = metrics.totalReferrals;
-  const averageGrowthRate = 0.15; 
+  const averageGrowthRate = 0.15;
 
   const projections = [
     {

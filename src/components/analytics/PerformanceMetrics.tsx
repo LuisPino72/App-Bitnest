@@ -64,7 +64,7 @@ export function PerformanceMetrics() {
       trend: roiPercentage > 15 ? "positive" : "neutral",
     },
     {
-      title: "Ingreso Promedio/Referido",
+      title: "Ingreso Promedio",
       value: formatCurrency(avgIncomePerReferral),
       description: "Ganancia media por referido",
       icon: DollarSign,
@@ -131,7 +131,7 @@ export function PerformanceMetrics() {
         ))}
       </div>
 
-      {/* ✅ NUEVO: Resumen de Generaciones */}
+      {/* Resumen de Generaciones */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">
           Distribución por Generaciones

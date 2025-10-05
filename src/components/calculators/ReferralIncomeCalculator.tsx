@@ -75,7 +75,6 @@ export default function ReferralIncomeCalculator() {
               >
                 <option value={1}>Primera Generación (20% comisión)</option>
                 <option value={2}>Segunda Generación (10% comisión)</option>
-                {/* ✅ Nueva opción */}
                 <option value={3}>
                   Tercera a séptima generación (5% comisión)
                 </option>
@@ -161,7 +160,6 @@ export default function ReferralIncomeCalculator() {
               <li>
                 • <strong>Segunda Generación:</strong> 10% de las ganancias
               </li>
-              {/* ✅ Nueva línea de información */}
               <li>
                 • <strong>Tercera a Séptima Generación:</strong> 5% de las
                 ganancias
@@ -219,7 +217,6 @@ export default function ReferralIncomeCalculator() {
                         Referido {index + 1}
                       </span>
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        {/* ✅ Mostrar "3-7" si la generación es >=3 */}
                         Gen {item.generation >= 3 ? "3-7" : item.generation}
                       </span>
                     </div>
