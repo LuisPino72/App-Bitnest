@@ -10,6 +10,7 @@ import {
   where,
   orderBy,
   limit,
+  startAfter,
   onSnapshot,
   Unsubscribe,
 } from "firebase/firestore";
@@ -55,12 +56,33 @@ const handleFirebaseError = (
   );
 };
 
-// Helper: mapear QuerySnapshot.docs a objetos con id (tipado minimal para compatibilidad)
 const mapDocs = <T>(docs: { id: string; data: () => any }[]): T[] =>
   docs.map((d) => ({ id: d.id, ...d.data() })) as T[];
 
 // ==================== SERVICIO BASE GENÉRICO ====================
 export class FirebaseService<T extends { id: string }> {
+  /**
+   * Suscribe a cambios en la colección en tiempo real.
+   * @param callback Función que recibe los datos actualizados
+   * @param orderByField Campo para ordenar
+   * @param orderDirection Dirección de orden
+   * @returns Unsubscribe
+   */
+  subscribe(
+    callback: (data: T[]) => void,
+    orderByField?: string,
+    orderDirection: "asc" | "desc" = "asc"
+  ): Unsubscribe {
+    const collectionRef = collection(db, this.collectionName);
+    let q: import("firebase/firestore").Query = collectionRef;
+    if (orderByField) {
+      q = query(collectionRef, orderBy(orderByField, orderDirection));
+    }
+    return onSnapshot(q, (querySnapshot) => {
+      const data = mapDocs<T>(querySnapshot.docs as any[]);
+      callback(data);
+    });
+  }
   constructor(private collectionName: string) {}
 
   async getAll(opts?: {
@@ -77,7 +99,6 @@ export class FirebaseService<T extends { id: string }> {
         q = query(q, orderBy(opts.orderByField, opts.orderDirection ?? "asc"));
       }
       if (opts?.limit ?? true) {
-        // Si no se especifica límite, usar 100 por defecto
         const lim = opts?.limit ?? 100;
         q = query(q, limit(lim));
       }
@@ -127,62 +148,69 @@ export class FirebaseService<T extends { id: string }> {
     }
   }
 
-  subscribe(
-    callback: (data: T[]) => void,
-    orderByField?: string,
-    orderDirection: "asc" | "desc" = "asc"
-  ): Unsubscribe {
+  /**
+   * @param opts 
+   * @returns { items: T[], nextCursor: any | null }
+   */
+  async getAllPaginated(opts?: {
+    limit?: number;
+    orderByField?: string;
+    orderDirection?: "asc" | "desc";
+    startAfter?: any;
+  }): Promise<{ items: T[]; nextCursor: any | null }> {
     try {
-      const collectionRef = collection(db, this.collectionName);
-      const q = orderByField
-        ? query(collectionRef, orderBy(orderByField, orderDirection))
-        : collectionRef;
-
-      return onSnapshot(q, (querySnapshot) => {
-        const data = mapDocs<T>(querySnapshot.docs as any[]);
-        callback(data);
-      });
-    } catch (error) {
-      return handleFirebaseError(error, "subscribe", this.collectionName);
-    }
-  }
-
-  // MÉTODOS ESPECÍFICOS CON QUERIES
-  async getByField(
-    field: string,
-    value: unknown,
-    opts?: {
-      limit?: number;
-      orderByField?: string;
-      orderDirection?: "asc" | "desc";
-    }
-  ): Promise<T[]> {
-    try {
-      let q: import("firebase/firestore").Query = query(
-        collection(db, this.collectionName),
-        where(field, "==", value)
+      let q: import("firebase/firestore").Query = collection(
+        db,
+        this.collectionName
       );
       if (opts?.orderByField) {
         q = query(q, orderBy(opts.orderByField, opts.orderDirection ?? "asc"));
       }
-      if (opts?.limit ?? true) {
-        const lim = opts?.limit ?? 100;
-        q = query(q, limit(lim));
+      if (opts?.startAfter) {
+        q = query(q, startAfter(opts.startAfter));
       }
+      const lim = opts?.limit ?? 10;
+      q = query(q, limit(lim));
       const querySnapshot = await getDocs(q);
-      return mapDocs<T>(querySnapshot.docs as any[]);
+      const docs = querySnapshot.docs as any[];
+      const items = mapDocs<T>(docs);
+      const nextCursor = docs.length === lim ? docs[docs.length - 1] : null;
+      return { items, nextCursor };
     } catch (error) {
-      return handleFirebaseError(
-        error,
-        `getByField:${field}`,
-        this.collectionName
-      );
+      return { items: [], nextCursor: null };
     }
   }
 }
 
 // ==================== SERVICIOS ESPECÍFICOS ====================
 export class ReferralService {
+  static subscribe(
+    callback: (referrals: Referral[]) => void,
+    orderByField?: string,
+    orderDirection: "asc" | "desc" = "desc"
+  ): Unsubscribe {
+    return this.service.subscribe(
+      callback,
+      orderByField ?? "startDate",
+      orderDirection
+    );
+  }
+  /**
+   * Obtiene referidos paginados (10 por página)
+   */
+  static async getAllPaginated(opts?: {
+    limit?: number;
+    orderByField?: string;
+    orderDirection?: "asc" | "desc";
+    startAfter?: any;
+  }): Promise<{ items: Referral[]; nextCursor: any | null }> {
+    return this.service.getAllPaginated({
+      ...opts,
+      limit: 10,
+      orderByField: opts?.orderByField ?? "startDate",
+      orderDirection: opts?.orderDirection ?? "desc",
+    });
+  }
   private static service = new FirebaseService<Referral>(COLLECTIONS.REFERRALS);
 
   static async getAll(): Promise<Referral[]> {
@@ -205,20 +233,33 @@ export class ReferralService {
     return this.service.delete(id);
   }
 
-  static async getByStatus(status: string): Promise<Referral[]> {
-    return this.service.getByField("status", status);
-  }
-
-  static async getByGeneration(generation: number): Promise<Referral[]> {
-    return this.service.getByField("generation", generation);
-  }
-
-  static subscribe(callback: (referrals: Referral[]) => void): Unsubscribe {
-    return this.service.subscribe(callback, "startDate", "desc");
-  }
 }
 
 export class PersonalInvestmentService {
+  static subscribe(
+    callback: (investments: PersonalInvestment[]) => void,
+    orderByField?: string,
+    orderDirection: "asc" | "desc" = "desc"
+  ): Unsubscribe {
+    return this.service.subscribe(
+      callback,
+      orderByField ?? "startDate",
+      orderDirection
+    );
+  }
+  static async getAllPaginated(opts?: {
+    limit?: number;
+    orderByField?: string;
+    orderDirection?: "asc" | "desc";
+    startAfter?: any;
+  }): Promise<{ items: PersonalInvestment[]; nextCursor: any | null }> {
+    return this.service.getAllPaginated({
+      ...opts,
+      limit: 10,
+      orderByField: opts?.orderByField ?? "startDate",
+      orderDirection: opts?.orderDirection ?? "desc",
+    });
+  }
   private static service = new FirebaseService<PersonalInvestment>(
     COLLECTIONS.PERSONAL_INVESTMENTS
   );
@@ -248,18 +289,34 @@ export class PersonalInvestmentService {
     return this.service.delete(id);
   }
 
-  static async getByStatus(status: string): Promise<PersonalInvestment[]> {
-    return this.service.getByField("status", status);
-  }
-
-  static subscribe(
-    callback: (investments: PersonalInvestment[]) => void
-  ): Unsubscribe {
-    return this.service.subscribe(callback, "startDate", "desc");
-  }
 }
 
 export class LeadService {
+  static subscribe(
+    callback: (leads: Lead[]) => void,
+    orderByField?: string,
+    orderDirection: "asc" | "desc" = "desc"
+  ): Unsubscribe {
+    return this.service.subscribe(
+      callback,
+      orderByField ?? "contactDate",
+      orderDirection
+    );
+  }
+ 
+  static async getAllPaginated(opts?: {
+    limit?: number;
+    orderByField?: string;
+    orderDirection?: "asc" | "desc";
+    startAfter?: any;
+  }): Promise<{ items: Lead[]; nextCursor: any | null }> {
+    return this.service.getAllPaginated({
+      ...opts,
+      limit: 10,
+      orderByField: opts?.orderByField ?? "contactDate",
+      orderDirection: opts?.orderDirection ?? "desc",
+    });
+  }
   private static service = new FirebaseService<Lead>(COLLECTIONS.LEADS);
 
   static async getAll(): Promise<Lead[]> {
@@ -282,13 +339,6 @@ export class LeadService {
     return this.service.delete(id);
   }
 
-  static async getByStatus(status: string): Promise<Lead[]> {
-    return this.service.getByField("status", status);
-  }
-
-  static subscribe(callback: (leads: Lead[]) => void): Unsubscribe {
-    return this.service.subscribe(callback, "contactDate", "desc");
-  }
 }
 
 // EXPORTACIÓN PARA USO DIRECTO SI ES NECESARIO

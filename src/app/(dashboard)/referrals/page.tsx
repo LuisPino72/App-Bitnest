@@ -19,7 +19,24 @@ export default function ReferralsPage() {
 
   // Soporte para todas las generaciones
   const [filterGeneration, setFilterGeneration] = useState<
-    "all" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
+    | "all"
+    | "1"
+    | "2"
+    | "3"
+    | "4"
+    | "5"
+    | "6"
+    | "7"
+    | "8"
+    | "9"
+    | "10"
+    | "11"
+    | "12"
+    | "13"
+    | "14"
+    | "15"
+    | "16"
+    | "17"
   >("all");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "completed" | "expired"
@@ -52,6 +69,16 @@ export default function ReferralsPage() {
       5: 0,
       6: 0,
       7: 0,
+      8: 0,
+      9: 0,
+      10: 0,
+      11: 0,
+      12: 0,
+      13: 0,
+      14: 0,
+      15: 0,
+      16: 0,
+      17: 0,
     };
 
     activeReferralPersons.forEach((referral) => {
@@ -108,7 +135,7 @@ export default function ReferralsPage() {
     const newEarnings = parseFloat((newAmount * 0.24).toFixed(2));
 
     // CÁLCULO PARA TODAS LAS GENERACIONES
-    const commissionRates = {
+    const commissionRates: Record<number, number> = {
       1: 0.2,
       2: 0.1,
       3: 0.05,
@@ -116,6 +143,16 @@ export default function ReferralsPage() {
       5: 0.05,
       6: 0.05,
       7: 0.05,
+      8: 0.03,
+      9: 0.03,
+      10: 0.03,
+      11: 0.01,
+      12: 0.01,
+      13: 0.01,
+      14: 0.01,
+      15: 0.01,
+      16: 0.01,
+      17: 0.01,
     };
     const commissionRate = commissionRates[referral.generation] || 0;
     const newUserIncome = parseFloat((newEarnings * commissionRate).toFixed(2));
@@ -168,7 +205,9 @@ export default function ReferralsPage() {
       colors[generation as keyof typeof colors] || "bg-gray-100 text-gray-800";
 
     return (
-      <span className={`${baseClasses} ${colorClass}`}>Generación {generation}</span>
+      <span className={`${baseClasses} ${colorClass}`}>
+        Generación {generation}
+      </span>
     );
   };
 
@@ -284,7 +323,9 @@ export default function ReferralsPage() {
                 }`}
               />
               <div className="ml-3">
-                <p className="text-base text-gray-600">Geneneración {generation}</p>
+                <p className="text-base text-gray-600">
+                  Geneneración {generation}
+                </p>
                 <p className="text-2xl font-bold">{count}</p>
               </div>
             </div>
@@ -330,6 +371,16 @@ export default function ReferralsPage() {
                 <option value="5">Quinta generación</option>
                 <option value="6">Sexta generación</option>
                 <option value="7">Séptima generación</option>
+                <option value="8">Octava generación</option>
+                <option value="9">Novena generación</option>
+                <option value="10">Décima generación</option>
+                <option value="11">11va generación</option>
+                <option value="12">12va generación</option>
+                <option value="13">13va generación</option>
+                <option value="14">14va generación</option>
+                <option value="15">15va generación</option>
+                <option value="16">16va generación</option>
+                <option value="17">17va generación</option>
               </select>
               <select
                 value={filterStatus}
@@ -348,7 +399,7 @@ export default function ReferralsPage() {
       {/* Tabla de Referidos */}
       <div className="rounded-2xl border bg-white shadow-lg max-w-6xl mx-auto mb-8">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-[900px] w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase">

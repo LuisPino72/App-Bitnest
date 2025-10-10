@@ -10,6 +10,8 @@ type FirestoreService<T> = {
   delete: (id: string) => Promise<void>;
 };
 
+const serviceCache = new WeakMap<object, { items: any[] }>();
+
 export function useFirestoreCollection<T>(service: FirestoreService<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,25 @@ export function useFirestoreCollection<T>(service: FirestoreService<T>) {
 
   useEffect(() => {
     setLoading(true);
+
+    try {
+      const cached = serviceCache.get(service as unknown as object);
+      if (cached && Array.isArray(cached.items) && cached.items.length > 0) {
+        setItems(cached.items as T[]);
+        setLoading(false);
+      }
+    } catch (err) {
+    }
+
     const unsub = service.subscribe((data) => {
+      try {
+        try {
+          serviceCache.set(service as unknown as object, { items: data });
+        } catch (e) {
+        }
+      } catch (err) {
+      }
+
       setItems(data);
       setLoading(false);
       setError(null);

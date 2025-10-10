@@ -11,6 +11,7 @@ import {
   PersonalInvestmentService,
   LeadService,
 } from "@/lib/firebaseService";
+import { BUSINESS_CONSTANTS } from "@/types/constants";
 import {
   calculateDashboardMetrics,
   getTopReferrals,
@@ -31,18 +32,23 @@ export const useFirebaseReferrals = () => {
 
   const addReferral = useCallback(
     async (referralData: Omit<Referral, "id">) => {
-      // Business logic: calcular earnings antes de crear
       try {
-        const earnings = referralData.amount * 0.24; 
-        const userIncome =
-          earnings *
-          (referralData.generation === 1
-            ? 0.2
-            : referralData.generation === 2
-            ? 0.1
-            : 0.05);
+        const cycleDays =
+          (referralData as any).cycleDays ??
+          referralData.cycle ??
+          BUSINESS_CONSTANTS.CYCLE_DAYS;
+        const earnings =
+          require("@/lib/businessUtils").calculateReferralEarnings(
+            referralData.amount,
+            cycleDays
+          );
+        const userIncome = require("@/lib/businessUtils").calculateUserIncome(
+          earnings,
+          referralData.generation
+        );
         const newReferral = {
           ...referralData,
+          cycleDays,
           earnings,
           userIncome,
           totalEarned: earnings,
@@ -57,17 +63,21 @@ export const useFirebaseReferrals = () => {
 
   const updateReferral = useCallback(
     async (id: string, updates: Partial<Referral>) => {
-      // si se actualiza amount/generation recalcular
       try {
         if (updates.amount !== undefined || updates.generation !== undefined) {
-          // Obtener el referral actual para recalcular correctamente
           const current = referrals.find((r) => r.id === id);
           if (current) {
             const newAmount = updates.amount ?? current.amount;
             const newGeneration = updates.generation ?? current.generation;
+            const cycleDays =
+              (updates as any).cycleDays ??
+              current.cycleDays ??
+              current.cycle ??
+              BUSINESS_CONSTANTS.CYCLE_DAYS;
             const earnings =
               require("@/lib/businessUtils").calculateReferralEarnings(
-                newAmount
+                newAmount,
+                cycleDays
               );
             const userIncome =
               require("@/lib/businessUtils").calculateUserIncome(
@@ -77,6 +87,7 @@ export const useFirebaseReferrals = () => {
             const totalEarned = earnings;
             await update(id, {
               ...updates,
+              cycleDays,
               earnings,
               userIncome,
               totalEarned,
@@ -101,10 +112,20 @@ export const useFirebaseReferrals = () => {
     [remove]
   );
 
+  // Agrupar referidos por generación en un Map para consultas rápidas
+  const referralsByGeneration = useMemo(() => {
+    const map = new Map<Generation, Referral[]>();
+    referrals.forEach((r) => {
+      const arr = map.get(r.generation as Generation) || [];
+      arr.push(r);
+      map.set(r.generation as Generation, arr);
+    });
+    return map;
+  }, [referrals]);
+
   const getReferralsByGeneration = useCallback(
-    (generation: Generation) =>
-      referrals.filter((r) => r.generation === generation),
-    [referrals]
+    (generation: Generation) => referralsByGeneration.get(generation) || [],
+    [referralsByGeneration]
   );
 
   return {
@@ -118,7 +139,7 @@ export const useFirebaseReferrals = () => {
   };
 };
 
-// Hook para inversiones personales 
+// Hook para inversiones personales
 export const useFirebasePersonalInvestments = () => {
   const {
     items: investments,
@@ -218,7 +239,6 @@ export const useFirebaseLeads = () => {
   };
 };
 
-// useFirebaseDashboardMetrics
 export const useFirebaseDashboardMetrics = () => {
   const { referrals, loading: referralsLoading } = useFirebaseReferrals();
   const { investments, loading: investmentsLoading } =

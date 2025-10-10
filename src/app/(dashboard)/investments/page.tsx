@@ -259,7 +259,7 @@ export default function InvestmentsPage() {
           </h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="min-w-[700px] w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">
@@ -319,7 +319,10 @@ export default function InvestmentsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingInvestment(investment.id)}
+                        onClick={() => {
+                          setEditingInvestment(investment.id);
+                          setShowForm(true);
+                        }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>

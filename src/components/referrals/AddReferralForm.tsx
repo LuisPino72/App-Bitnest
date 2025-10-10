@@ -51,6 +51,16 @@ export function AddReferralForm({
     { value: 5, label: "5ta Generación (5%)" },
     { value: 6, label: "6ta Generación (5%)" },
     { value: 7, label: "7ma Generación (5%)" },
+    { value: 8, label: "8va Generación (3%)" },
+    { value: 9, label: "9na Generación (3%)" },
+    { value: 10, label: "10ma Generación (3%)" },
+    { value: 11, label: "11va Generación (1%)" },
+    { value: 12, label: "12va Generación (1%)" },
+    { value: 13, label: "13va Generación (1%)" },
+    { value: 14, label: "14va Generación (1%)" },
+    { value: 15, label: "15va Generación (1%)" },
+    { value: 16, label: "16va Generación (1%)" },
+    { value: 17, label: "17va Generación (1%)" },
   ];
 
   // Estados para autocompletado
@@ -75,13 +85,15 @@ export function AddReferralForm({
       setFormData({
         name: referral.name,
         wallet: referral.wallet,
-        amount: referral.amount.toString(),
-        cycle: referral.cycle?.toString() || "1",
+        amount: referral.amount?.toString() || "",
+        cycle: (referral.cycle || referral.cycleCount || 1).toString(),
         generation: referral.generation.toString(),
         investmentDate: referral.investmentDate,
         expirationDate: referral.expirationDate,
       });
-      updateCalculations(referral.amount, referral.generation);
+      const initCycle =
+        referral.cycle || referral.cycleCount || BUSINESS_CONSTANTS.CYCLE_DAYS;
+      updateCalculations(referral.amount, referral.generation, initCycle);
     } else {
       const today = new Date().toISOString().split("T")[0];
       setFormData((prev) => ({
@@ -92,8 +104,15 @@ export function AddReferralForm({
     }
   }, [referral]);
 
-  const updateCalculations = (amount: number, generation: Generation) => {
-    const referralEarnings = calculateReferralEarnings(amount);
+  const updateCalculations = (
+    amount: number,
+    generation: Generation,
+    cycleDaysOverride?: number
+  ) => {
+    const cycleDaysNum =
+      cycleDaysOverride ??
+      (parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS);
+    const referralEarnings = calculateReferralEarnings(amount, cycleDaysNum);
     const myIncome = calculateUserIncome(referralEarnings, generation);
     setCalculations({
       referralEarnings,
@@ -103,23 +122,41 @@ export function AddReferralForm({
   };
 
   const handleAmountChange = (amount: string) => {
-    const numAmount = parseFloat(amount) || 0;
+    if (amount === "") {
+      setFormData((prev) => ({ ...prev, amount }));
+      const cycleDays =
+        parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS;
+      updateCalculations(
+        0,
+        parseInt(formData.generation, 10) as Generation,
+        cycleDays
+      );
+      return;
+    }
+
+    const numAmount = parseFloat(amount);
+    if (Number.isNaN(numAmount)) return;
     setFormData((prev) => ({ ...prev, amount }));
-    updateCalculations(numAmount, parseInt(formData.generation) as Generation);
+    const cycleDays =
+      parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS;
+    updateCalculations(
+      numAmount,
+      parseInt(formData.generation, 10) as Generation,
+      cycleDays
+    );
   };
 
   const handleGenerationChange = (generation: string) => {
     setFormData((prev) => ({ ...prev, generation }));
-    if (formData.amount) {
-      updateCalculations(
-        parseFloat(formData.amount),
-        parseInt(generation) as Generation
-      );
-    }
+    const amt = parseFloat(formData.amount) || 0;
+    const cycleDays =
+      parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS;
+    updateCalculations(amt, parseInt(generation, 10) as Generation, cycleDays);
   };
 
   const handleInvestmentDateChange = (date: string) => {
-    const expirationDate = calculateExpirationDate(date);
+    const days = parseInt(formData.cycle) || BUSINESS_CONSTANTS.CYCLE_DAYS;
+    const expirationDate = calculateExpirationDate(date, days);
     setFormData((prev) => ({ ...prev, investmentDate: date, expirationDate }));
   };
 
@@ -285,17 +322,41 @@ export function AddReferralForm({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ciclo
+                Ciclo (días)
               </label>
-              <input
-                type="number"
-                min="1"
+              <select
                 value={formData.cycle}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, cycle: e.target.value }))
-                }
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, cycle: e.target.value }));
+                  const newCycle =
+                    parseInt(e.target.value, 10) ||
+                    BUSINESS_CONSTANTS.CYCLE_DAYS;
+                  if (formData.amount) {
+                    updateCalculations(
+                      parseFloat(formData.amount),
+                      parseInt(formData.generation) as Generation,
+                      newCycle
+                    );
+                  }
+                  // actualizar vencimiento
+                  if (formData.investmentDate) {
+                    const expiration = calculateExpirationDate(
+                      formData.investmentDate,
+                      parseInt(e.target.value)
+                    );
+                    setFormData((prev) => ({
+                      ...prev,
+                      expirationDate: expiration,
+                    }));
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              >
+                <option value={"1"}>1 día (0.4%)</option>
+                <option value={"7"}>7 días (4%)</option>
+                <option value={"14"}>14 días (9.5%)</option>
+                <option value={"28"}>28 días (24%)</option>
+              </select>
             </div>
 
             {/*Selec de generación con todas las opciones */}
@@ -340,8 +401,7 @@ export function AddReferralForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
             />
             <p className="text-sm text-gray-500 mt-1">
-              Se calcula automáticamente: fecha de inversión +{" "}
-              {BUSINESS_CONSTANTS.CYCLE_DAYS} días
+              Se calcula automáticamente según el ciclo seleccionado
             </p>
           </div>
 
@@ -357,7 +417,9 @@ export function AddReferralForm({
                   <p className="font-medium">
                     {formatCurrency(calculations.referralEarnings)}
                   </p>
-                  <p className="text-xs text-gray-500">(24% del monto)</p>
+                  <p className="text-xs text-gray-500">
+                    (Según ciclo seleccionado)
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-600">Mi Ingreso:</p>

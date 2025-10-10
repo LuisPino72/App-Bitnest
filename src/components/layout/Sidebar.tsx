@@ -114,7 +114,12 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
               isCollapsed && !isMobile ? "justify-center w-full" : "w-full"
             )}
           >
-            <LayoutDashboard className="h-6 w-6 text-blue-600 flex-shrink-0" />
+            <img
+              src="/favicon.ico"
+              alt="Bitnest"
+              className="h-6 w-6 flex-shrink-0"
+              style={{ objectFit: "contain" }}
+            />
             {(!isCollapsed || isMobile) && (
               <span className="ml-2 text-lg font-bold text-gray-900 whitespace-nowrap">
                 Bitnest
@@ -188,7 +193,7 @@ export default function Sidebar({ onCollapseChange }: SidebarProps) {
               !isCollapsed || isMobile ? "opacity-100" : "opacity-0"
             )}
           >
-            Gestión Bitnest {new Date().getFullYear()} 
+            Gestión Bitnest {new Date().getFullYear()}
           </div>
         </div>
       </div>

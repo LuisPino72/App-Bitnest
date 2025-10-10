@@ -29,58 +29,68 @@ export function InvestmentDistributionChart() {
   const averageInvestment =
     totalReferrals > 0 ? metrics.totalInvestments / totalReferrals : 0;
 
-  // Datos para todas las generaciones con inversión estimada
-  const data = [
-    {
-      name: "1ra Generación",
-      value: metrics.firstGeneration,
-      investment: metrics.firstGeneration * averageInvestment,
-      color: "#3b82f6",
-      commission: "20%",
-    },
-    {
-      name: "2da Generación",
-      value: metrics.secondGeneration,
-      investment: metrics.secondGeneration * averageInvestment,
-      color: "#10b981",
-      commission: "10%",
-    },
-    {
-      name: "3ra Generación",
-      value: metrics.thirdGeneration,
-      investment: metrics.thirdGeneration * averageInvestment,
-      color: "#f59e0b",
-      commission: "5%",
-    },
-    {
-      name: "4ta Generación",
-      value: metrics.fourthGeneration,
-      investment: metrics.fourthGeneration * averageInvestment,
-      color: "#ef4444",
-      commission: "5%",
-    },
-    {
-      name: "5ta Generación",
-      value: metrics.fifthGeneration,
-      investment: metrics.fifthGeneration * averageInvestment,
-      color: "#8b5cf6",
-      commission: "5%",
-    },
-    {
-      name: "6ta Generación",
-      value: metrics.sixthGeneration,
-      investment: metrics.sixthGeneration * averageInvestment,
-      color: "#06b6d4",
-      commission: "5%",
-    },
-    {
-      name: "7ma Generación",
-      value: metrics.seventhGeneration,
-      investment: metrics.seventhGeneration * averageInvestment,
-      color: "#f97316",
-      commission: "5%",
-    },
-  ].filter((item) => item.value > 0);
+  // Construir dinámicamente datos para generaciones 1..17 desde metrics
+  const palette = [
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#06b6d4",
+    "#f97316",
+    "#a3e635",
+    "#60a5fa",
+    "#f472b6",
+    "#fb7185",
+    "#34d399",
+    "#60a5fa",
+    "#f59e0b",
+    "#c084fc",
+    "#f97316",
+    "#94a3b8",
+  ];
+
+  const genCounts = [
+    metrics.firstGeneration,
+    metrics.secondGeneration,
+    metrics.thirdGeneration,
+    metrics.fourthGeneration,
+    metrics.fifthGeneration,
+    metrics.sixthGeneration,
+    metrics.seventhGeneration,
+    metrics.eighthGeneration,
+    metrics.ninthGeneration,
+    metrics.tenthGeneration,
+    metrics.eleventhGeneration,
+    metrics.twelfthGeneration,
+    metrics.thirteenthGeneration,
+    metrics.fourteenthGeneration,
+    metrics.fifteenthGeneration,
+    metrics.sixteenthGeneration,
+    metrics.seventeenthGeneration,
+  ];
+
+  const data = genCounts
+    .map((count, idx) => {
+      const gen = idx + 1;
+      return {
+        name: `${gen}ra Generación`.replace("1ra", "1ra").replace("2ra", "2da"),
+        value: count,
+        investment: count * averageInvestment,
+        color: palette[idx % palette.length],
+        commission:
+          gen === 1
+            ? "20%"
+            : gen === 2
+            ? "10%"
+            : gen >= 3 && gen <= 7
+            ? "5%"
+            : gen >= 8 && gen <= 10
+            ? "3%"
+            : "1%",
+      };
+    })
+    .filter((item) => item.value > 0);
 
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const totalInvestment = data.reduce((sum, item) => sum + item.investment, 0);

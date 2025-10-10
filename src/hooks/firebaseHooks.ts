@@ -7,6 +7,7 @@ import {
   PersonalInvestmentService,
   LeadService,
 } from "@/lib/firebaseService";
+import { BUSINESS_CONSTANTS } from "@/types/constants";
 import {
   calculateDashboardMetrics,
   getTopReferrals,
@@ -51,7 +52,14 @@ export const useFirebaseReferrals = () => {
     ) => {
       try {
         setError(null);
-        const earnings = calculateReferralEarnings(referralData.amount);
+        const cycleDays =
+          (referralData as any).cycleDays ??
+          referralData.cycle ??
+          BUSINESS_CONSTANTS.CYCLE_DAYS;
+        const earnings = calculateReferralEarnings(
+          referralData.amount,
+          cycleDays
+        );
         const userIncome = calculateUserIncome(
           earnings,
           referralData.generation
@@ -59,6 +67,7 @@ export const useFirebaseReferrals = () => {
 
         const newReferral: Omit<Referral, "id"> = {
           ...referralData,
+          cycleDays,
           earnings,
           userIncome,
           totalEarned: earnings,
@@ -82,8 +91,14 @@ export const useFirebaseReferrals = () => {
           const currentReferral = referrals.find((r) => r.id === id);
           if (currentReferral) {
             const updatedData = { ...currentReferral, ...updates };
+            const cycleDays =
+              (updates as any).cycleDays ??
+              updatedData.cycleDays ??
+              updatedData.cycle ??
+              BUSINESS_CONSTANTS.CYCLE_DAYS;
             updatedData.earnings = calculateReferralEarnings(
-              updatedData.amount
+              updatedData.amount,
+              cycleDays
             );
             updatedData.userIncome = calculateUserIncome(
               updatedData.earnings,

@@ -1,7 +1,24 @@
 // ==================== TIPOS BASE ====================
 export type LeadStatus = "interested" | "doubtful" | "rejected";
 export type ReferralStatus = "active" | "completed" | "expired";
-export type Generation = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type Generation =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17;
 
 // ==================== INTERFACES PRINCIPALES ====================
 export interface Referral {
@@ -11,6 +28,7 @@ export interface Referral {
   generation: Generation;
   amount: number;
   cycle: number;
+  cycleDays?: number;
   investmentDate: string;
   startDate: string;
   expirationDate: string;
@@ -55,6 +73,16 @@ export interface DashboardMetrics {
   fifthGeneration: number;
   sixthGeneration: number;
   seventhGeneration: number;
+  eighthGeneration: number;
+  ninthGeneration: number;
+  tenthGeneration: number;
+  eleventhGeneration: number;
+  twelfthGeneration: number;
+  thirteenthGeneration: number;
+  fourteenthGeneration: number;
+  fifteenthGeneration: number;
+  sixteenthGeneration: number;
+  seventeenthGeneration: number;
   totalEarnings: number;
   monthlyEarnings: number;
   expiringToday: number;

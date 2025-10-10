@@ -13,13 +13,14 @@ import {
   BUSINESS_CONSTANTS,
   getCommissionRate,
   HISTORICAL_EARNINGS,
+  getCycleRateFromDays,
 } from "@/types/constants";
 
 // ==================== UTILIDADES DE FECHA ====================
-// Devuelve la fecha actual en UTC-04:00 (Venezuela/Caracas)
+
 export const getTodayISO = (): string => {
   const now = new Date();
-  // Ajustar a UTC-04:00
+ 
   const utcMinus4 = new Date(
     now.getTime() - (now.getTimezoneOffset() + 240) * 60000
   );
@@ -33,13 +34,18 @@ export const formatDate = (date: string): string => {
 };
 
 export const addDays = (date: string, days: number): string => {
-  const d = new Date(date);
-  // Ajustar a UTC-04:00
-  const utcMinus4 = new Date(
-    d.getTime() - (d.getTimezoneOffset() + 240) * 60000
-  );
-  utcMinus4.setDate(utcMinus4.getDate() + days);
-  return utcMinus4.toISOString().split("T")[0];
+  if (!date) return "";
+  const parts = date.split("-");
+  if (parts.length < 3) return "";
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  const dt = new Date(year, month - 1, day);
+  dt.setDate(dt.getDate() + days);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 };
 
 export const isToday = (date: string): boolean => date === getTodayISO();
@@ -52,8 +58,13 @@ export const daysBetween = (date1: string, date2: string): number => {
 };
 
 // ==================== CÁLCULOS DE INVERSIÓN ====================
-export const calculateReferralEarnings = (amount: number): number =>
-  amount * BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
+export const calculateReferralEarnings = (
+  amount: number,
+  cycleDays?: number
+): number => {
+  const rate = getCycleRateFromDays(cycleDays);
+  return amount * rate;
+};
 
 export const calculateUserIncome = (
   referralEarnings: number,
@@ -66,8 +77,10 @@ export const calculateUserIncome = (
 export const calculatePersonalEarnings = (amount: number): number =>
   amount * BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
 
-export const calculateExpirationDate = (startDate: string): string =>
-  addDays(startDate, BUSINESS_CONSTANTS.CYCLE_DAYS);
+export const calculateExpirationDate = (
+  startDate: string,
+  days: number = BUSINESS_CONSTANTS.CYCLE_DAYS
+): string => addDays(startDate, days);
 
 // ==================== FILTROS Y AGRUPACIONES ====================
 export const getActiveReferrals = (referrals: Referral[]): Referral[] =>
@@ -133,7 +146,7 @@ export const calculateDashboardMetrics = (
     personalEarnings: 0,
     referralMonthlyEarnings: 0,
     investmentMonthlyEarnings: 0,
-    byGeneration: [0, 0, 0, 0, 0, 0, 0] as number[],
+    byGeneration: Array.from({ length: 17 }, () => 0) as number[],
     expiringTodayCount: 0,
   };
 
@@ -142,7 +155,7 @@ export const calculateDashboardMetrics = (
     initial.totalReferralInvestments += r.amount;
     initial.referralIncome += r.userIncome || 0;
 
-    const genIndex = Math.max(1, Math.min(7, r.generation)) - 1;
+    const genIndex = Math.max(1, Math.min(17, r.generation)) - 1;
     initial.byGeneration[genIndex] = (initial.byGeneration[genIndex] || 0) + 1;
 
     const refDate = new Date(r.startDate || r.investmentDate);
@@ -182,6 +195,16 @@ export const calculateDashboardMetrics = (
     fifthGeneration: initial.byGeneration[4] || 0,
     sixthGeneration: initial.byGeneration[5] || 0,
     seventhGeneration: initial.byGeneration[6] || 0,
+    eighthGeneration: initial.byGeneration[7] || 0,
+    ninthGeneration: initial.byGeneration[8] || 0,
+    tenthGeneration: initial.byGeneration[9] || 0,
+    eleventhGeneration: initial.byGeneration[10] || 0,
+    twelfthGeneration: initial.byGeneration[11] || 0,
+    thirteenthGeneration: initial.byGeneration[12] || 0,
+    fourteenthGeneration: initial.byGeneration[13] || 0,
+    fifteenthGeneration: initial.byGeneration[14] || 0,
+    sixteenthGeneration: initial.byGeneration[15] || 0,
+    seventeenthGeneration: initial.byGeneration[16] || 0,
     totalEarnings,
     monthlyEarnings,
     expiringToday: initial.expiringTodayCount,
@@ -216,7 +239,10 @@ export const calculateReferralIncomeProjection = (
   input: ReferralCalculatorInput
 ): ReferralCalculatorResult => {
   const breakdown = input.referrals.map((referralGroup) => {
-    const referralEarnings = calculateReferralEarnings(referralGroup.amount);
+    const referralEarnings = calculateReferralEarnings(
+      referralGroup.amount,
+      (referralGroup as any).cycleDays
+    );
     const userIncome = calculateUserIncome(
       referralEarnings,
       referralGroup.generation
@@ -375,4 +401,3 @@ export function calculateGenerationMetrics(referrals: Referral[]) {
     seventhGeneration: calculateMetrics(seventhGen),
   };
 }
-

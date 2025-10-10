@@ -10,15 +10,28 @@ export function PerformanceMetrics() {
   const { metrics } = useDashboardMetrics();
   const { leads } = useFirebaseLeads();
 
-  // Calcula total de referidos con todas las generaciones
-  const totalReferrals =
-    metrics.firstGeneration +
-    metrics.secondGeneration +
-    metrics.thirdGeneration +
-    metrics.fourthGeneration +
-    metrics.fifthGeneration +
-    metrics.sixthGeneration +
-    metrics.seventhGeneration;
+  // Sumar todas las generaciones 1..17
+  const genCounts = [
+    metrics.firstGeneration,
+    metrics.secondGeneration,
+    metrics.thirdGeneration,
+    metrics.fourthGeneration,
+    metrics.fifthGeneration,
+    metrics.sixthGeneration,
+    metrics.seventhGeneration,
+    metrics.eighthGeneration,
+    metrics.ninthGeneration,
+    metrics.tenthGeneration,
+    metrics.eleventhGeneration,
+    metrics.twelfthGeneration,
+    metrics.thirteenthGeneration,
+    metrics.fourteenthGeneration,
+    metrics.fifteenthGeneration,
+    metrics.sixteenthGeneration,
+    metrics.seventeenthGeneration,
+  ];
+
+  const totalReferrals = genCounts.reduce((s, v) => s + (v || 0), 0);
 
   const totalInvestment = metrics.totalInvestments;
   const totalMyIncome = metrics.totalEarnings;
@@ -28,20 +41,11 @@ export function PerformanceMetrics() {
   const roiPercentage =
     totalInvestment > 0 ? (totalMyIncome / totalInvestment) * 100 : 0;
 
-  // Calcula eficiencia de red con todas las generaciones
   const firstGenCount = metrics.firstGeneration || 0;
-  const totalDescendants =
-    metrics.secondGeneration +
-    metrics.thirdGeneration +
-    metrics.fourthGeneration +
-    metrics.fifthGeneration +
-    metrics.sixthGeneration +
-    metrics.seventhGeneration;
-
+  const totalDescendants = genCounts.slice(1).reduce((s, v) => s + (v || 0), 0);
   const networkEfficiency =
     firstGenCount > 0 ? (totalDescendants / firstGenCount) * 100 : 0;
 
-  // Calcula tasa de conversión real de leads
   const interestedLeads = leads.filter(
     (lead: any) => lead.status === "interested"
   ).length;
@@ -49,9 +53,10 @@ export function PerformanceMetrics() {
   const conversionRate =
     totalLeads > 0 ? (interestedLeads / totalLeads) * 100 : 0;
 
-  // Calcula crecimiento mensual basado en todas las generaciones
   const monthlyGrowthRate =
-    totalReferrals > 0 ? (metrics.monthlyEarnings / totalMyIncome) * 100 : 0;
+    totalReferrals > 0
+      ? (metrics.monthlyEarnings / (totalMyIncome || 1)) * 100
+      : 0;
 
   const performanceData = [
     {
@@ -93,9 +98,8 @@ export function PerformanceMetrics() {
   ];
 
   const getTrendIcon = (trend: string) => {
-    if (trend === "positive") {
+    if (trend === "positive")
       return <TrendingUp className="h-4 w-4 text-green-500" />;
-    }
     return null;
   };
 
@@ -131,60 +135,41 @@ export function PerformanceMetrics() {
         ))}
       </div>
 
-      {/* Resumen de Generaciones */}
+      {/* Distribución por Generaciones */}
       <div className="mt-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">
           Distribución por Generaciones
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {[
-            {
-              name: "1ra Gen",
-              count: metrics.firstGeneration,
-              color: "bg-blue-500",
-            },
-            {
-              name: "2da Gen",
-              count: metrics.secondGeneration,
-              color: "bg-green-500",
-            },
-            {
-              name: "3ra Gen",
-              count: metrics.thirdGeneration,
-              color: "bg-yellow-500",
-            },
-            {
-              name: "4ta Gen",
-              count: metrics.fourthGeneration,
-              color: "bg-red-500",
-            },
-            {
-              name: "5ta Gen",
-              count: metrics.fifthGeneration,
-              color: "bg-purple-500",
-            },
-            {
-              name: "6ta Gen",
-              count: metrics.sixthGeneration,
-              color: "bg-cyan-500",
-            },
-            {
-              name: "7ma Gen",
-              count: metrics.seventhGeneration,
-              color: "bg-orange-500",
-            },
-          ].map((gen, index) => (
-            <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
-              <div
-                className={`w-3 h-3 ${gen.color} rounded-full mx-auto mb-2`}
-              ></div>
-              <div className="text-sm font-medium text-gray-900">
-                {gen.name}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {genCounts.map((count, idx) => {
+            const gen = idx + 1;
+            if (!count || count === 0) return null;
+            const color =
+              idx === 0
+                ? "bg-blue-500"
+                : idx === 1
+                ? "bg-green-500"
+                : idx === 2
+                ? "bg-yellow-500"
+                : idx === 3
+                ? "bg-red-500"
+                : idx === 4
+                ? "bg-purple-500"
+                : idx === 5
+                ? "bg-cyan-500"
+                : idx === 6
+                ? "bg-orange-500"
+                : "bg-gray-400";
+
+            return (
+              <div key={idx} className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className={`w-3 h-3 ${color} rounded-full mx-auto mb-2`} />
+                <div className="text-sm font-medium text-gray-900">{`${gen}ra Gen`}</div>
+                <div className="text-lg font-bold text-gray-700">{count}</div>
+                <div className="text-xs text-gray-500">referidos</div>
               </div>
-              <div className="text-lg font-bold text-gray-700">{gen.count}</div>
-              <div className="text-xs text-gray-500">referidos</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

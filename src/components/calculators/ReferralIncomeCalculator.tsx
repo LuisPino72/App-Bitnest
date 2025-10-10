@@ -6,10 +6,14 @@ import {
   calculateReferralIncomeProjection,
   formatCurrency,
 } from "@/lib/businessUtils";
-import { ReferralCalculatorInput, ReferralCalculatorResult } from "@/types";
+import {
+  ReferralCalculatorInput,
+  ReferralCalculatorResult,
+  Generation,
+} from "@/types";
 
 interface ReferralInput {
-  generation: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  generation: Generation; 
   amount: number;
   count: number;
 }
@@ -38,15 +42,44 @@ export default function ReferralIncomeCalculator() {
   };
 
   const updateInput = (field: keyof ReferralInput, value: string) => {
-    const numValue =
-      field === "generation"
-        ? (parseInt(value) as 1 | 2 | 3 | 4 | 5 | 6 | 7)
-        : parseFloat(value) || 0;
-    setInput((prev) => ({ ...prev, [field]: numValue }));
+    if (value === "") {
+      setInput((prev) => ({ ...prev, [field]: 0 }));
+      return;
+    }
+
+    if (field === "generation") {
+      const g = parseInt(value, 10);
+      if (Number.isNaN(g)) return;
+      setInput((prev) => ({ ...prev, generation: g as Generation }));
+      return;
+    }
+
+    const n = parseFloat(value);
+    if (Number.isNaN(n)) return;
+    setInput((prev) => ({ ...prev, [field]: n }));
   };
 
   const commissionRate =
-    input.generation === 1 ? 0.2 : input.generation === 2 ? 0.1 : 0.05;
+    input.generation === 1
+      ? 0.2
+      : input.generation === 2
+      ? 0.1
+      : input.generation >= 3 && input.generation <= 7
+      ? 0.05
+      : input.generation >= 8 && input.generation <= 10
+      ? 0.03
+      : input.generation >= 11 && input.generation <= 17
+      ? 0.01
+      : 0;
+
+  const formatGenerationLabel = (g: number) => {
+    if (g === 1) return "1";
+    if (g === 2) return "2";
+    if (g === 3) return "3-7";
+    if (g === 8) return "8-10";
+    if (g === 11) return "11-17";
+    return String(g);
+  };
 
   return (
     <div className="card p-6">
@@ -75,9 +108,9 @@ export default function ReferralIncomeCalculator() {
               >
                 <option value={1}>Primera Generación (20% comisión)</option>
                 <option value={2}>Segunda Generación (10% comisión)</option>
-                <option value={3}>
-                  Tercera a séptima generación (5% comisión)
-                </option>
+                <option value={3}>Tercera a séptima Gen (5% comisión)</option>
+                <option value={8}>Octava a décima Gen (3% comisión)</option>
+                <option value={11}>11va a 17va Gen (1% comisión)</option>
               </select>
             </div>
 
@@ -217,7 +250,7 @@ export default function ReferralIncomeCalculator() {
                         Referido {index + 1}
                       </span>
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        Gen {item.generation >= 3 ? "3-7" : item.generation}
+                        Gen {formatGenerationLabel(item.generation)}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">

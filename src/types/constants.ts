@@ -11,6 +11,8 @@ export const BUSINESS_CONSTANTS = {
   FIFTH_GEN_COMMISSION: 0.05,
   SIXTH_GEN_COMMISSION: 0.05,
   SEVENTH_GEN_COMMISSION: 0.05,
+  EIGHTH_TO_TENTH_COMMISSION: 0.03,
+  ELEVENTH_TO_SEVENTEENTH_COMMISSION: 0.01,
 } as const;
 
 // Función helper para obtener comisión por generación
@@ -30,9 +32,34 @@ export const getCommissionRate = (generation: Generation): number => {
       return BUSINESS_CONSTANTS.SIXTH_GEN_COMMISSION;
     case 7:
       return BUSINESS_CONSTANTS.SEVENTH_GEN_COMMISSION;
+    case 8:
+    case 9:
+    case 10:
+      return BUSINESS_CONSTANTS.EIGHTH_TO_TENTH_COMMISSION;
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+      return BUSINESS_CONSTANTS.ELEVENTH_TO_SEVENTEENTH_COMMISSION;
     default:
       return 0;
   }
+};
+
+// Mapa ciclo (días) => tasa de ganancias para el referido
+export const CYCLE_OPTIONS: Record<number, number> = {
+  1: 0.004,
+  7: 0.04, 
+  14: 0.095, 
+  28: 0.24, 
+};
+
+export const getCycleRateFromDays = (days?: number): number => {
+  if (!days) return BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
+  return CYCLE_OPTIONS[days] ?? BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
 };
 
 // Valor histórico

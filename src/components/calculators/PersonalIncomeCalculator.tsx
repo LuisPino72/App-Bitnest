@@ -9,24 +9,31 @@ import {
 import { CalculatorInput, CalculatorResult } from "@/types";
 
 export default function PersonalIncomeCalculator() {
-  const [input, setInput] = useState({ amount: 10, cycles: 1 });
+  const [input, setInput] = useState({ amount: "10", cycles: "1" });
   const [result, setResult] = useState<CalculatorResult | null>(null);
 
   const handleCalculate = () => {
-    if (input.amount > 0 && input.cycles > 0) {
-      const calculation = calculatePersonalIncomeProjection(input);
-      setResult(calculation);
-    }
+    const amount = parseFloat(input.amount);
+    const cycles = parseInt(input.cycles, 10);
+    if (
+      Number.isNaN(amount) ||
+      Number.isNaN(cycles) ||
+      amount <= 0 ||
+      cycles <= 0
+    )
+      return;
+
+    const calculation = calculatePersonalIncomeProjection({ amount, cycles });
+    setResult(calculation);
   };
 
   const handleReset = () => {
-    setInput({ amount: 10, cycles: 1 });
+    setInput({ amount: "10", cycles: "1" });
     setResult(null);
   };
 
   const updateInput = (field: keyof typeof input, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setInput((prev) => ({ ...prev, [field]: numValue }));
+    setInput((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
