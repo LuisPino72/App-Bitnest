@@ -87,7 +87,23 @@ export function AddReferralForm({
     };
   }, []);
 
-  // Iniciar formulario
+  const updateCalculations = useCallback(
+    (amount: number, generation: Generation, cycleDaysOverride?: number) => {
+      const cycleDaysNum =
+        cycleDaysOverride ??
+        (parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS);
+      const referralEarnings = calculateReferralEarnings(amount, cycleDaysNum);
+      const myIncome = calculateUserIncome(referralEarnings, generation);
+      setCalculations({
+        referralEarnings,
+        myIncome,
+        totalEarned: referralEarnings + myIncome,
+      });
+    },
+    [formData.cycle]
+  );
+
+  // Iniciar formulario (moved below updateCalculations to avoid used-before-declaration)
   useEffect(() => {
     if (referral) {
       setFormData({
@@ -110,23 +126,7 @@ export function AddReferralForm({
         expirationDate: calculateExpirationDate(today),
       }));
     }
-  }, [referral]);
-
-  const updateCalculations = useCallback(
-    (amount: number, generation: Generation, cycleDaysOverride?: number) => {
-      const cycleDaysNum =
-        cycleDaysOverride ??
-        (parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS);
-      const referralEarnings = calculateReferralEarnings(amount, cycleDaysNum);
-      const myIncome = calculateUserIncome(referralEarnings, generation);
-      setCalculations({
-        referralEarnings,
-        myIncome,
-        totalEarned: referralEarnings + myIncome,
-      });
-    },
-    [formData.cycle]
-  );
+  }, [referral, updateCalculations]);
 
   const handleAmountChange = (amount: string) => {
     if (amount === "") {

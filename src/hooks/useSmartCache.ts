@@ -302,10 +302,154 @@ export function useMultiKeyCache<T>(
   fetcher: (key: string) => Promise<T>,
   options: CacheOptions = {}
 ): Record<string, SmartCacheResult<T>> {
-  const results: Record<string, SmartCacheResult<T>> = {};
+  const cacheRef = useRef<SmartCache<T> | null>(null);
+  const [stateMap, setStateMap] = useState<
+    Record<
+      string,
+      {
+        data: T | null;
+        isLoading: boolean;
+        error: string | null;
+        lastUpdated: number | null;
+      }
+    >
+  >(() => {
+    const m: Record<string, any> = {};
+    for (const k of keys) {
+      m[k] = { data: null, isLoading: false, error: null, lastUpdated: null };
+    }
+    return m;
+  });
 
-  for (const key of keys) {
-    results[key] = useSmartCache(key, () => fetcher(key), options);
+  // Inicializar instancia de caché
+  useEffect(() => {
+    if (!cacheRef.current) {
+      cacheRef.current = new SmartCache<T>(options);
+    }
+  }, [options]);
+
+  // Sincronizar claves: asegurarse que stateMap contiene entradas para todas las keys
+  useEffect(() => {
+    setStateMap((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const k of keys) {
+        if (!next[k]) {
+          next[k] = {
+            data: null,
+            isLoading: false,
+            error: null,
+            lastUpdated: null,
+          };
+          changed = true;
+        }
+      }
+      // opcional: eliminar keys que ya no se solicitan
+      for (const pk of Object.keys(next)) {
+        if (!keys.includes(pk)) {
+          delete next[pk];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [keys]);
+
+  // Función interna para cargar una clave
+  const fetchKey = useCallback(
+    async (k: string, force = false) => {
+      const cache = cacheRef.current;
+      if (!cache) return;
+
+      if (!force) {
+        const cached = cache.get(k);
+        if (cached !== null) {
+          setStateMap((prev) => ({
+            ...prev,
+            [k]: {
+              ...(prev[k] || {}),
+              data: cached,
+              isLoading: false,
+              error: null,
+              lastUpdated: Date.now(),
+            },
+          }));
+          return;
+        }
+      }
+
+      setStateMap((prev) => ({
+        ...prev,
+        [k]: { ...(prev[k] || {}), isLoading: true, error: null },
+      }));
+
+      try {
+        const res = await fetcher(k);
+        cache.set(k, res);
+        setStateMap((prev) => ({
+          ...prev,
+          [k]: {
+            ...(prev[k] || {}),
+            data: res,
+            isLoading: false,
+            error: null,
+            lastUpdated: Date.now(),
+          },
+        }));
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Error desconocido";
+        setStateMap((prev) => ({
+          ...prev,
+          [k]: { ...(prev[k] || {}), isLoading: false, error: message },
+        }));
+      }
+    },
+    [fetcher]
+  );
+
+  // Efecto para cargar todas las keys inicialmente
+  useEffect(() => {
+    for (const k of keys) {
+      fetchKey(k, false);
+    }
+  }, [keys, fetchKey]);
+
+  // Construir el resultado con funciones enlazadas
+  const results: Record<string, SmartCacheResult<T>> = {};
+  for (const k of keys) {
+    const entry = stateMap[k] || {
+      data: null,
+      isLoading: false,
+      error: null,
+      lastUpdated: null,
+    };
+
+    results[k] = {
+      data: entry.data,
+      isLoading: entry.isLoading,
+      error: entry.error,
+      isStale: (() => {
+        const cache = cacheRef.current;
+        if (!cache) return true;
+        const e = cache.getEntry(k);
+        if (!e) return true;
+        return Date.now() - e.timestamp > e.ttl;
+      })(),
+      lastUpdated: entry.lastUpdated,
+      refresh: async () => fetchKey(k, true),
+      invalidate: () => {
+        cacheRef.current?.delete(k);
+        setStateMap((prev) => ({
+          ...prev,
+          [k]: { ...(prev[k] || {}), data: null, lastUpdated: null },
+        }));
+      },
+      clear: () => {
+        cacheRef.current?.clear();
+        setStateMap({});
+      },
+    };
   }
 
   return results;
