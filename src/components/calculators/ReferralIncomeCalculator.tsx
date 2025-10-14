@@ -6,6 +6,7 @@ import {
   calculateReferralIncomeProjection,
   formatCurrency,
 } from "@/lib/businessUtils";
+import { getCommissionRate } from "@/lib/commissionUtils";
 import {
   ReferralCalculatorInput,
   ReferralCalculatorResult,
@@ -13,7 +14,7 @@ import {
 } from "@/types";
 
 interface ReferralInput {
-  generation: Generation; 
+  generation: Generation;
   amount: number;
   count: number;
 }
@@ -59,18 +60,7 @@ export default function ReferralIncomeCalculator() {
     setInput((prev) => ({ ...prev, [field]: n }));
   };
 
-  const commissionRate =
-    input.generation === 1
-      ? 0.2
-      : input.generation === 2
-      ? 0.1
-      : input.generation >= 3 && input.generation <= 7
-      ? 0.05
-      : input.generation >= 8 && input.generation <= 10
-      ? 0.03
-      : input.generation >= 11 && input.generation <= 17
-      ? 0.01
-      : 0;
+  const commissionRate = getCommissionRate(input.generation);
 
   const formatGenerationLabel = (g: number) => {
     if (g === 1) return "1";
@@ -195,6 +185,14 @@ export default function ReferralIncomeCalculator() {
               </li>
               <li>
                 • <strong>Tercera a Séptima Generación:</strong> 5% de las
+                ganancias
+              </li>
+              <li>
+                • <strong>Octava a Décima Generación:</strong> 3% de las
+                ganancias
+              </li>
+              <li>
+                • <strong> Décima primera a Décimo séptima Generación:</strong> 1% de las
                 ganancias
               </li>
               <li>

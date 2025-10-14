@@ -1,101 +1,143 @@
 "use client";
 
+import React, { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardMetrics } from "@/hooks/useFirebaseData";
 import { useFirebaseLeads } from "@/hooks/useFirebaseData";
 import { formatCurrency } from "@/lib/businessUtils";
 import { Zap, DollarSign, Users, Percent, TrendingUp } from "lucide-react";
 
-export function PerformanceMetrics() {
+export const PerformanceMetrics = React.memo(() => {
   const { metrics } = useDashboardMetrics();
   const { leads } = useFirebaseLeads();
 
-  // Sumar todas las generaciones 1..17
-  const genCounts = [
-    metrics.firstGeneration,
-    metrics.secondGeneration,
-    metrics.thirdGeneration,
-    metrics.fourthGeneration,
-    metrics.fifthGeneration,
-    metrics.sixthGeneration,
-    metrics.seventhGeneration,
-    metrics.eighthGeneration,
-    metrics.ninthGeneration,
-    metrics.tenthGeneration,
-    metrics.eleventhGeneration,
-    metrics.twelfthGeneration,
-    metrics.thirteenthGeneration,
-    metrics.fourteenthGeneration,
-    metrics.fifteenthGeneration,
-    metrics.sixteenthGeneration,
-    metrics.seventeenthGeneration,
-  ];
+  // Memoizar cálculos costosos
+  const genCounts = useMemo(
+    () => [
+      metrics.firstGeneration,
+      metrics.secondGeneration,
+      metrics.thirdGeneration,
+      metrics.fourthGeneration,
+      metrics.fifthGeneration,
+      metrics.sixthGeneration,
+      metrics.seventhGeneration,
+      metrics.eighthGeneration,
+      metrics.ninthGeneration,
+      metrics.tenthGeneration,
+      metrics.eleventhGeneration,
+      metrics.twelfthGeneration,
+      metrics.thirteenthGeneration,
+      metrics.fourteenthGeneration,
+      metrics.fifteenthGeneration,
+      metrics.sixteenthGeneration,
+      metrics.seventeenthGeneration,
+    ],
+    [metrics]
+  );
 
-  const totalReferrals = genCounts.reduce((s, v) => s + (v || 0), 0);
+  const totalReferrals = useMemo(
+    () => genCounts.reduce((s, v) => s + (v || 0), 0),
+    [genCounts]
+  );
 
-  const totalInvestment = metrics.totalInvestments;
-  const totalMyIncome = metrics.totalEarnings;
+  const totalInvestment = useMemo(
+    () => metrics.totalInvestments,
+    [metrics.totalInvestments]
+  );
+  const totalMyIncome = useMemo(
+    () => metrics.totalEarnings,
+    [metrics.totalEarnings]
+  );
 
-  const avgIncomePerReferral =
-    totalReferrals > 0 ? totalMyIncome / totalReferrals : 0;
-  const roiPercentage =
-    totalInvestment > 0 ? (totalMyIncome / totalInvestment) * 100 : 0;
+  const avgIncomePerReferral = useMemo(
+    () => (totalReferrals > 0 ? totalMyIncome / totalReferrals : 0),
+    [totalReferrals, totalMyIncome]
+  );
 
-  const firstGenCount = metrics.firstGeneration || 0;
-  const totalDescendants = genCounts.slice(1).reduce((s, v) => s + (v || 0), 0);
-  const networkEfficiency =
-    firstGenCount > 0 ? (totalDescendants / firstGenCount) * 100 : 0;
+  const roiPercentage = useMemo(
+    () => (totalInvestment > 0 ? (totalMyIncome / totalInvestment) * 100 : 0),
+    [totalInvestment, totalMyIncome]
+  );
 
-  const interestedLeads = leads.filter(
-    (lead: any) => lead.status === "interested"
-  ).length;
-  const totalLeads = leads.length;
-  const conversionRate =
-    totalLeads > 0 ? (interestedLeads / totalLeads) * 100 : 0;
+  const firstGenCount = useMemo(
+    () => metrics.firstGeneration || 0,
+    [metrics.firstGeneration]
+  );
+  const totalDescendants = useMemo(
+    () => genCounts.slice(1).reduce((s, v) => s + (v || 0), 0),
+    [genCounts]
+  );
+  const networkEfficiency = useMemo(
+    () => (firstGenCount > 0 ? (totalDescendants / firstGenCount) * 100 : 0),
+    [firstGenCount, totalDescendants]
+  );
 
-  const monthlyGrowthRate =
-    totalReferrals > 0
-      ? (metrics.monthlyEarnings / (totalMyIncome || 1)) * 100
-      : 0;
+  const interestedLeads = useMemo(
+    () => leads.filter((lead: any) => lead.status === "interested").length,
+    [leads]
+  );
+  const totalLeads = useMemo(() => leads.length, [leads]);
+  const conversionRate = useMemo(
+    () => (totalLeads > 0 ? (interestedLeads / totalLeads) * 100 : 0),
+    [totalLeads, interestedLeads]
+  );
 
-  const performanceData = [
-    {
-      title: "ROI Total",
-      value: `${roiPercentage.toFixed(1)}%`,
-      description: "Retorno sobre inversiones",
-      icon: Percent,
-      color: "text-green-600",
-      bg: "bg-green-50",
-      trend: roiPercentage > 15 ? "positive" : "neutral",
-    },
-    {
-      title: "Ingreso Promedio",
-      value: formatCurrency(avgIncomePerReferral),
-      description: "Ganancia media por referido",
-      icon: DollarSign,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      trend: avgIncomePerReferral > 100 ? "positive" : "neutral",
-    },
-    {
-      title: "Eficiencia de Red",
-      value: `${networkEfficiency.toFixed(1)}%`,
-      description: `${totalDescendants} descendientes de ${firstGenCount} raíz`,
-      icon: Users,
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-      trend: networkEfficiency > 50 ? "positive" : "neutral",
-    },
-    {
-      title: "Crecimiento Mensual",
-      value: `${monthlyGrowthRate.toFixed(1)}%`,
-      description: "Tasa de crecimiento mensual",
-      icon: TrendingUp,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-      trend: monthlyGrowthRate > 10 ? "positive" : "neutral",
-    },
-  ];
+  const monthlyGrowthRate = useMemo(
+    () =>
+      totalReferrals > 0
+        ? (metrics.monthlyEarnings / (totalMyIncome || 1)) * 100
+        : 0,
+    [totalReferrals, metrics.monthlyEarnings, totalMyIncome]
+  );
+
+  const performanceData = useMemo(
+    () => [
+      {
+        title: "ROI Total",
+        value: `${roiPercentage.toFixed(1)}%`,
+        description: "Retorno sobre inversiones",
+        icon: Percent,
+        color: "text-green-600",
+        bg: "bg-green-50",
+        trend: roiPercentage > 15 ? "positive" : "neutral",
+      },
+      {
+        title: "Ingreso Promedio",
+        value: formatCurrency(avgIncomePerReferral),
+        description: "Ganancia media por referido",
+        icon: DollarSign,
+        color: "text-blue-600",
+        bg: "bg-blue-50",
+        trend: avgIncomePerReferral > 100 ? "positive" : "neutral",
+      },
+      {
+        title: "Eficiencia de Red",
+        value: `${networkEfficiency.toFixed(1)}%`,
+        description: `${totalDescendants} descendientes de ${firstGenCount} raíz`,
+        icon: Users,
+        color: "text-purple-600",
+        bg: "bg-purple-50",
+        trend: networkEfficiency > 50 ? "positive" : "neutral",
+      },
+      {
+        title: "Crecimiento Mensual",
+        value: `${monthlyGrowthRate.toFixed(1)}%`,
+        description: "Tasa de crecimiento mensual",
+        icon: TrendingUp,
+        color: "text-orange-600",
+        bg: "bg-orange-50",
+        trend: monthlyGrowthRate > 10 ? "positive" : "neutral",
+      },
+    ],
+    [
+      roiPercentage,
+      avgIncomePerReferral,
+      networkEfficiency,
+      totalDescendants,
+      firstGenCount,
+      monthlyGrowthRate,
+    ]
+  );
 
   const getTrendIcon = (trend: string) => {
     if (trend === "positive")
@@ -174,4 +216,6 @@ export function PerformanceMetrics() {
       </div>
     </div>
   );
-}
+});
+
+PerformanceMetrics.displayName = "PerformanceMetrics";

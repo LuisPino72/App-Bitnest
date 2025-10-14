@@ -133,3 +133,41 @@ Thumbs.db
 
 # Local development
 .vercel
+
+#script
+scripts/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Analytics and monitoring
+.analytics/
+
+# Performance monitoring
+.lighthouseci/
+
+# Bundle analysis
+.bundle-analyzer/
+
+# Local development tools
+.firebaserc
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+
+# Documentation builds
+docs/build/
+site/
+
+# Testing
+.jest/
+test-results/
+playwright-report/
+
+# Deployment
+.deploy/

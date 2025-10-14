@@ -55,15 +55,13 @@ interface ExportData {
 
 export default function ExportPage() {
   const { referrals } = useFirebaseReferrals();
-  const { investments, getActiveInvestments } =
-    useFirebasePersonalInvestments();
+  const { investments, activeInvestments } = useFirebasePersonalInvestments();
   const [isExporting, setIsExporting] = useState(false);
 
   // Calcular métricas usando useMemo para performance
   const metrics = useMemo(() => {
     const activeReferralPersons = getActiveReferralPersons(referrals);
     const totalUniqueReferrals = getUniqueReferrals(referrals);
-    const activeInvestments = getActiveInvestments();
     const totalCommission = referrals.reduce(
       (sum, r) => sum + (r.userIncome || 0),
       0
@@ -88,7 +86,7 @@ export default function ExportPage() {
       totalEarnings,
       netWorth: totalInvested + totalEarnings,
     };
-  }, [referrals, investments, getActiveInvestments]);
+  }, [referrals, investments, activeInvestments]);
 
   const prepareExportData = (): ExportData => {
     return {

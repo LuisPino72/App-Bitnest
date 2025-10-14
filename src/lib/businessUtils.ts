@@ -11,16 +11,20 @@ import {
 } from "@/types";
 import {
   BUSINESS_CONSTANTS,
-  getCommissionRate,
+  getCommissionRate as getLegacyCommissionRate,
   HISTORICAL_EARNINGS,
   getCycleRateFromDays,
 } from "@/types/constants";
+import {
+  getCommissionRate,
+  calculateUserIncome as calculateUserIncomeNew,
+} from "./commissionUtils";
 
 // ==================== UTILIDADES DE FECHA ====================
 
 export const getTodayISO = (): string => {
   const now = new Date();
- 
+
   const utcMinus4 = new Date(
     now.getTime() - (now.getTimezoneOffset() + 240) * 60000
   );
@@ -70,8 +74,7 @@ export const calculateUserIncome = (
   referralEarnings: number,
   generation: Generation = 1
 ): number => {
-  const commissionRate = getCommissionRate(generation);
-  return referralEarnings * commissionRate;
+  return calculateUserIncomeNew(referralEarnings, generation);
 };
 
 export const calculatePersonalEarnings = (amount: number): number =>

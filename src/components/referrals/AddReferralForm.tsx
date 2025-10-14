@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  ValidationErrors,
+  FormFieldError,
+} from "@/components/ui/ValidationMessage";
 import { useFirebaseReferrals } from "@/hooks";
+import { useFormErrorHandler } from "@/hooks/useErrorHandler";
+import { validateReferral, sanitizeReferralData } from "@/lib/validation";
 import type { Referral, Generation } from "@/types";
 import {
   calculateReferralEarnings,
@@ -26,6 +32,8 @@ export function AddReferralForm({
   referral,
 }: AddReferralFormProps) {
   const { addReferral, updateReferral, referrals } = useFirebaseReferrals();
+  const { error, fieldErrors, setError, clearError, handleAsync } =
+    useFormErrorHandler();
   const isEdit = !!referral;
 
   const [formData, setFormData] = useState({
@@ -168,39 +176,58 @@ export function AddReferralForm({
     }
 
     const lowerTerm = term.toLowerCase();
-    const results = referrals.filter(
+    const matches = referrals.filter(
       (ref) =>
         ref.name.toLowerCase().includes(lowerTerm) ||
         ref.wallet.toLowerCase().includes(lowerTerm)
     );
-    setFilteredReferrals(results.slice(0, 5));
+
+    // Para que cada wallet aparezca una sola vez
+    const uniqueByWalletMap: Record<string, Referral> = {};
+    for (const m of matches) {
+      const key = (m.wallet || "").toLowerCase();
+      if (!uniqueByWalletMap[key]) {
+        uniqueByWalletMap[key] = m;
+      }
+    }
+
+    const uniqueResults = Object.values(uniqueByWalletMap);
+    setFilteredReferrals(uniqueResults.slice(0, 5));
     setShowSuggestions(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.name.trim() || !formData.wallet.trim() || !formData.amount) {
-      alert("Por favor completa todos los campos obligatorios");
-      return;
-    }
+    clearError();
 
     const numAmount = parseFloat(formData.amount);
-    if (numAmount <= 0) {
-      alert("El monto de inversión debe ser mayor a 0");
+    const referralData = {
+      name: formData.name.trim(),
+      wallet: formData.wallet.trim(),
+      amount: numAmount,
+      cycle: parseInt(formData.cycle),
+      generation: parseInt(formData.generation) as Generation,
+      status: "active" as const,
+      investmentDate: formData.investmentDate,
+      expirationDate: formData.expirationDate,
+    };
+
+    const validation = validateReferral(referralData);
+    if (!validation.success) {
+      setError({
+        message: "Por favor corrige los errores en el formulario",
+        code: "VALIDATION_ERROR",
+        details: validation.errors,
+      } as any);
       return;
     }
 
-    try {
-      const referralData = {
-        name: formData.name.trim(),
-        wallet: formData.wallet.trim(),
-        amount: numAmount,
-        cycle: parseInt(formData.cycle),
-        generation: parseInt(formData.generation) as Generation,
-        status: "active" as const,
-        investmentDate: formData.investmentDate,
-        expirationDate: formData.expirationDate,
+    // Sanitizar datos antes de enviar
+    const sanitizedData = sanitizeReferralData(validation.data);
+
+    const result = await handleAsync(async () => {
+      const completeReferralData = {
+        ...sanitizedData,
         startDate: new Date().toISOString().split("T")[0],
         cycleCount: 1,
         earnings: calculations.referralEarnings,
@@ -209,15 +236,14 @@ export function AddReferralForm({
       };
 
       if (isEdit && referral) {
-        await updateReferral(referral.id, referralData);
+        await updateReferral(referral.id, completeReferralData);
       } else {
-        await addReferral(referralData);
+        await addReferral(completeReferralData);
       }
+    });
 
+    if (result !== null) {
       onSuccess?.();
-    } catch (error) {
-      console.error("Error al guardar el referido:", error);
-      alert("Error al guardar el referido");
     }
   };
 
@@ -230,6 +256,15 @@ export function AddReferralForm({
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/*  Mostrar errores de validación */}
+        {error && (
+          <ValidationErrors
+            errors={error.details || [error.message]}
+            onClose={clearError}
+            className="mb-4"
+          />
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             {/* Campo de Nombre con Autocompletado */}

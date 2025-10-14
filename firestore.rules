@@ -1,0 +1,212 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==================== REGLAS DE AUTENTICACIÓN ====================
+    
+    // Función para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función para verificar si es el propietario del documento
+    function isOwner(resource) {
+      return request.auth.uid == resource.data.userId;
+    }
+    
+    // Función para verificar si es el propietario basado en el campo userId
+    function isOwnerByField(resource) {
+      return request.auth.uid == resource.data.userId;
+    }
+    
+    // ==================== REGLAS PARA REFERIDOS ====================
+    
+    match /referrals/{referralId} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && isOwnerByField(resource);
+      
+      // Permitir creación si el usuario está autenticado y asigna su propio userId
+      allow create: if isAuthenticated() 
+        && request.auth.uid == request.resource.data.userId
+        && validateReferralData(request.resource.data);
+      
+      // Permitir actualización si el usuario está autenticado y es el propietario
+      allow update: if isAuthenticated() 
+        && isOwnerByField(resource)
+        && isOwnerByField(request.resource)
+        && validateReferralData(request.resource.data);
+      
+      // Permitir eliminación si el usuario está autenticado y es el propietario
+      allow delete: if isAuthenticated() && isOwnerByField(resource);
+    }
+    
+    // ==================== REGLAS PARA INVERSIONES PERSONALES ====================
+    
+    match /personalInvestments/{investmentId} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && isOwnerByField(resource);
+      
+      // Permitir creación si el usuario está autenticado y asigna su propio userId
+      allow create: if isAuthenticated() 
+        && request.auth.uid == request.resource.data.userId
+        && validateInvestmentData(request.resource.data);
+      
+      // Permitir actualización si el usuario está autenticado y es el propietario
+      allow update: if isAuthenticated() 
+        && isOwnerByField(resource)
+        && isOwnerByField(request.resource)
+        && validateInvestmentData(request.resource.data);
+      
+      // Permitir eliminación si el usuario está autenticado y es el propietario
+      allow delete: if isAuthenticated() && isOwnerByField(resource);
+    }
+    
+    // ==================== REGLAS PARA LEADS ====================
+    
+    match /leads/{leadId} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && isOwnerByField(resource);
+      
+      // Permitir creación si el usuario está autenticado y asigna su propio userId
+      allow create: if isAuthenticated() 
+        && request.auth.uid == request.resource.data.userId
+        && validateLeadData(request.resource.data);
+      
+      // Permitir actualización si el usuario está autenticado y es el propietario
+      allow update: if isAuthenticated() 
+        && isOwnerByField(resource)
+        && isOwnerByField(request.resource)
+        && validateLeadData(request.resource.data);
+      
+      // Permitir eliminación si el usuario está autenticado y es el propietario
+      allow delete: if isAuthenticated() && isOwnerByField(resource);
+    }
+    
+    // ==================== REGLAS PARA MÉTRICAS DEL DASHBOARD ====================
+    
+    match /dashboardMetrics/{metricId} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && isOwnerByField(resource);
+      
+      // Permitir creación si el usuario está autenticado y asigna su propio userId
+      allow create: if isAuthenticated() 
+        && request.auth.uid == request.resource.data.userId
+        && validateMetricsData(request.resource.data);
+      
+      // Permitir actualización si el usuario está autenticado y es el propietario
+      allow update: if isAuthenticated() 
+        && isOwnerByField(resource)
+        && isOwnerByField(request.resource)
+        && validateMetricsData(request.resource.data);
+      
+      // No permitir eliminación de métricas (solo actualización)
+      allow delete: if false;
+    }
+    
+    // ==================== FUNCIONES DE VALIDACIÓN ====================
+    
+    // Validar datos de referidos
+    function validateReferralData(data) {
+      return data.keys().hasAll([
+        'name', 'wallet', 'amount', 'generation', 'cycle', 
+        'status', 'investmentDate', 'expirationDate', 'userId'
+      ])
+      && data.name is string
+      && data.name.size() >= 2
+      && data.name.size() <= 50
+      && data.wallet is string
+      && data.wallet.size() >= 10
+      && data.wallet.size() <= 100
+      && data.amount is number
+      && data.amount > 0
+      && data.amount <= 1000000
+      && data.generation is int
+      && data.generation >= 1
+      && data.generation <= 17
+      && data.cycle is int
+      && data.cycle >= 1
+      && data.status in ['active', 'completed', 'expired']
+      && data.investmentDate is string
+      && data.expirationDate is string
+      && data.userId is string
+      && data.userId.size() > 0;
+    }
+    
+    // Validar datos de inversiones personales
+    function validateInvestmentData(data) {
+      return data.keys().hasAll([
+        'amount', 'startDate', 'expirationDate', 'status', 'userId'
+      ])
+      && data.amount is number
+      && data.amount > 0
+      && data.amount <= 1000000
+      && data.startDate is string
+      && data.expirationDate is string
+      && data.status in ['active', 'completed', 'expired']
+      && data.userId is string
+      && data.userId.size() > 0;
+    }
+    
+    // Validar datos de leads
+    function validateLeadData(data) {
+      return data.keys().hasAll([
+        'name', 'status', 'userId'
+      ])
+      && data.name is string
+      && data.name.size() >= 2
+      && data.name.size() <= 50
+      && data.status in ['interested', 'doubtful', 'rejected']
+      && data.userId is string
+      && data.userId.size() > 0;
+    }
+    
+    // Validar datos de métricas
+    function validateMetricsData(data) {
+      return data.keys().hasAll([
+        'totalInvestments', 'totalReferrals', 'totalEarnings', 'userId'
+      ])
+      && data.totalInvestments is number
+      && data.totalInvestments >= 0
+      && data.totalReferrals is number
+      && data.totalReferrals >= 0
+      && data.totalEarnings is number
+      && data.totalEarnings >= 0
+      && data.userId is string
+      && data.userId.size() > 0;
+    }
+    
+    // ==================== REGLAS ADICIONALES DE SEGURIDAD ====================
+    
+    // Regla por defecto: denegar acceso a cualquier colección no especificada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // ==================== REGLAS PARA ADMINISTRADORES ====================
+    // (Descomenta si necesitas acceso de administrador)
+    
+    // Función para verificar si es administrador
+    // function isAdmin() {
+    //   return request.auth.token.admin == true;
+    // }
+    
+    // Reglas de administrador para referidos
+    // match /referrals/{referralId} {
+    //   allow read, write: if isAdmin();
+    // }
+    
+    // ==================== REGLAS PARA BACKUP Y AUDITORÍA ====================
+    
+    // Colección de auditoría (solo lectura para usuarios autenticados)
+    match /audit/{auditId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Solo el sistema puede escribir auditorías
+    }
+    
+    // Colección de backup (solo lectura para usuarios autenticados)
+    match /backups/{backupId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Solo el sistema puede crear backups
+    }
+  }
+}

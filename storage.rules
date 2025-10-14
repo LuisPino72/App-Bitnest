@@ -1,0 +1,165 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ==================== REGLAS DE AUTENTICACIÓN ====================
+    
+    // Función para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función para verificar si es el propietario del archivo
+    function isOwner(resource) {
+      return request.auth.uid == resource.metadata.userId;
+    }
+    
+    // ==================== REGLAS PARA ARCHIVOS DE USUARIOS ====================
+    
+    // Carpeta de perfil de usuario
+    match /users/{userId}/{allPaths=**} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir escritura si el usuario está autenticado y es el propietario
+      allow write: if isAuthenticated() 
+        && request.auth.uid == userId
+        && validateUserFile(request.resource);
+    }
+    
+    // Carpeta de documentos de referidos
+    match /referrals/{userId}/{allPaths=**} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir escritura si el usuario está autenticado y es el propietario
+      allow write: if isAuthenticated() 
+        && request.auth.uid == userId
+        && validateReferralFile(request.resource);
+    }
+    
+    // Carpeta de documentos de inversiones
+    match /investments/{userId}/{allPaths=**} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir escritura si el usuario está autenticado y es el propietario
+      allow write: if isAuthenticated() 
+        && request.auth.uid == userId
+        && validateInvestmentFile(request.resource);
+    }
+    
+    // Carpeta de exports y reportes
+    match /exports/{userId}/{allPaths=**} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir escritura si el usuario está autenticado y es el propietario
+      allow write: if isAuthenticated() 
+        && request.auth.uid == userId
+        && validateExportFile(request.resource);
+    }
+    
+    // Carpeta de backups
+    match /backups/{userId}/{allPaths=**} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir escritura si el usuario está autenticado y es el propietario
+      allow write: if isAuthenticated() 
+        && request.auth.uid == userId
+        && validateBackupFile(request.resource);
+    }
+    
+    // ==================== FUNCIONES DE VALIDACIÓN ====================
+    
+    // Validar archivos de usuario (fotos de perfil, etc.)
+    function validateUserFile(resource) {
+      return resource.size < 5 * 1024 * 1024 // 5MB máximo
+        && resource.contentType.matches('image/.*')
+        && resource.metadata.keys().hasAll(['userId'])
+        && resource.metadata.userId == request.auth.uid;
+    }
+    
+    // Validar archivos de referidos (documentos, contratos, etc.)
+    function validateReferralFile(resource) {
+      return resource.size < 10 * 1024 * 1024 // 10MB máximo
+        && (resource.contentType.matches('application/pdf')
+            || resource.contentType.matches('image/.*')
+            || resource.contentType.matches('application/msword')
+            || resource.contentType.matches('application/vnd.openxmlformats-officedocument.wordprocessingml.document'))
+        && resource.metadata.keys().hasAll(['userId'])
+        && resource.metadata.userId == request.auth.uid;
+    }
+    
+    // Validar archivos de inversiones (comprobantes, etc.)
+    function validateInvestmentFile(resource) {
+      return resource.size < 10 * 1024 * 1024 // 10MB máximo
+        && (resource.contentType.matches('application/pdf')
+            || resource.contentType.matches('image/.*')
+            || resource.contentType.matches('application/msword')
+            || resource.contentType.matches('application/vnd.openxmlformats-officedocument.wordprocessingml.document'))
+        && resource.metadata.keys().hasAll(['userId'])
+        && resource.metadata.userId == request.auth.uid;
+    }
+    
+    // Validar archivos de exportación (Excel, PDF, etc.)
+    function validateExportFile(resource) {
+      return resource.size < 50 * 1024 * 1024 // 50MB máximo
+        && (resource.contentType.matches('application/pdf')
+            || resource.contentType.matches('application/vnd.ms-excel')
+            || resource.contentType.matches('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            || resource.contentType.matches('text/csv'))
+        && resource.metadata.keys().hasAll(['userId'])
+        && resource.metadata.userId == request.auth.uid;
+    }
+    
+    // Validar archivos de backup (archivos comprimidos, etc.)
+    function validateBackupFile(resource) {
+      return resource.size < 100 * 1024 * 1024 // 100MB máximo
+        && (resource.contentType.matches('application/zip')
+            || resource.contentType.matches('application/x-tar')
+            || resource.contentType.matches('application/gzip'))
+        && resource.metadata.keys().hasAll(['userId'])
+        && resource.metadata.userId == request.auth.uid;
+    }
+    
+    // ==================== REGLAS ADICIONALES DE SEGURIDAD ====================
+    
+    // Regla por defecto: denegar acceso a cualquier archivo no especificado
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+    
+    // ==================== REGLAS PARA ARCHIVOS TEMPORALES ====================
+    
+    // Carpeta de archivos temporales (con expiración automática)
+    match /temp/{userId}/{allPaths=**} {
+      // Permitir lectura si el usuario está autenticado y es el propietario
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir escritura si el usuario está autenticado y es el propietario
+      allow write: if isAuthenticated() 
+        && request.auth.uid == userId
+        && resource.size < 5 * 1024 * 1024 // 5MB máximo para archivos temporales
+        && resource.metadata.keys().hasAll(['userId', 'expiresAt'])
+        && resource.metadata.userId == request.auth.uid;
+    }
+    
+    // ==================== REGLAS PARA LOGS Y AUDITORÍA ====================
+    
+    // Carpeta de logs (solo lectura para usuarios autenticados)
+    match /logs/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false; // Solo el sistema puede escribir logs
+    }
+    
+    // ==================== REGLAS PARA ARCHIVOS COMPARTIDOS ====================
+    
+    // Carpeta de archivos compartidos (para futuras funcionalidades)
+    match /shared/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if false; // Temporalmente deshabilitado
+    }
+  }
+}

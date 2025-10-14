@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Referral,
@@ -16,10 +18,14 @@ import {
   calculateDashboardMetrics,
   getTopReferrals,
   getExpiringToday,
+  calculateReferralEarnings,
+  calculateUserIncome,
+  calculatePersonalEarnings,
+  calculateExpirationDate,
 } from "@/lib/businessUtils";
 import { useFirestoreCollection } from "./useFirestoreCollection";
 
-// Hook para referidos
+// ==================== HOOK OPTIMIZADO PARA REFERIDOS ====================
 export const useFirebaseReferrals = () => {
   const {
     items: referrals,
@@ -30,22 +36,48 @@ export const useFirebaseReferrals = () => {
     remove,
   } = useFirestoreCollection<Referral>(ReferralService as any);
 
+  // Memoizar cálculos costosos para evitar re-renderizados
+  const activeReferrals = useMemo(
+    () => referrals.filter((r) => r.status === "active"),
+    [referrals]
+  );
+
+  const referralsByGeneration = useMemo(() => {
+    const map = new Map<Generation, Referral[]>();
+    referrals.forEach((r) => {
+      const existing = map.get(r.generation as Generation) || [];
+      map.set(r.generation as Generation, [...existing, r]);
+    });
+    return map;
+  }, [referrals]);
+
+  const totalCommission = useMemo(
+    () => referrals.reduce((sum, r) => sum + (r.userIncome || 0), 0),
+    [referrals]
+  );
+
+  // Función para agregar referidos
   const addReferral = useCallback(
-    async (referralData: Omit<Referral, "id">) => {
+    async (
+      referralData: Omit<
+        Referral,
+        "id" | "earnings" | "userIncome" | "totalEarned"
+      >
+    ) => {
       try {
         const cycleDays =
           (referralData as any).cycleDays ??
           referralData.cycle ??
           BUSINESS_CONSTANTS.CYCLE_DAYS;
-        const earnings =
-          require("@/lib/businessUtils").calculateReferralEarnings(
-            referralData.amount,
-            cycleDays
-          );
-        const userIncome = require("@/lib/businessUtils").calculateUserIncome(
+        const earnings = calculateReferralEarnings(
+          referralData.amount,
+          cycleDays
+        );
+        const userIncome = calculateUserIncome(
           earnings,
           referralData.generation
         );
+
         const newReferral = {
           ...referralData,
           cycleDays,
@@ -53,6 +85,7 @@ export const useFirebaseReferrals = () => {
           userIncome,
           totalEarned: earnings,
         } as Omit<Referral, "id">;
+
         return await create(newReferral);
       } catch (err) {
         throw err;
@@ -61,6 +94,7 @@ export const useFirebaseReferrals = () => {
     [create]
   );
 
+  // Función para actualizar referidos
   const updateReferral = useCallback(
     async (id: string, updates: Partial<Referral>) => {
       try {
@@ -74,17 +108,10 @@ export const useFirebaseReferrals = () => {
               current.cycleDays ??
               current.cycle ??
               BUSINESS_CONSTANTS.CYCLE_DAYS;
-            const earnings =
-              require("@/lib/businessUtils").calculateReferralEarnings(
-                newAmount,
-                cycleDays
-              );
-            const userIncome =
-              require("@/lib/businessUtils").calculateUserIncome(
-                earnings,
-                newGeneration
-              );
+            const earnings = calculateReferralEarnings(newAmount, cycleDays);
+            const userIncome = calculateUserIncome(earnings, newGeneration);
             const totalEarned = earnings;
+
             await update(id, {
               ...updates,
               cycleDays,
@@ -106,40 +133,36 @@ export const useFirebaseReferrals = () => {
   );
 
   const deleteReferral = useCallback(
-    async (id: string) => {
-      return await remove(id);
-    },
+    async (id: string) => await remove(id),
     [remove]
   );
-
-  // Agrupar referidos por generación en un Map para consultas rápidas
-  const referralsByGeneration = useMemo(() => {
-    const map = new Map<Generation, Referral[]>();
-    referrals.forEach((r) => {
-      const arr = map.get(r.generation as Generation) || [];
-      arr.push(r);
-      map.set(r.generation as Generation, arr);
-    });
-    return map;
-  }, [referrals]);
 
   const getReferralsByGeneration = useCallback(
     (generation: Generation) => referralsByGeneration.get(generation) || [],
     [referralsByGeneration]
   );
 
+  const getReferralById = useCallback(
+    (id: string): Referral | undefined => referrals.find((r) => r.id === id),
+    [referrals]
+  );
+
   return {
     referrals,
+    activeReferrals,
+    referralsByGeneration,
+    totalCommission,
     loading,
     error,
     addReferral,
     updateReferral,
     deleteReferral,
     getReferralsByGeneration,
+    getReferralById,
   };
 };
 
-// Hook para inversiones personales
+// ==================== HOOK OPTIMIZADO PARA INVERSIONES PERSONALES ====================
 export const useFirebasePersonalInvestments = () => {
   const {
     items: investments,
@@ -152,10 +175,20 @@ export const useFirebasePersonalInvestments = () => {
     PersonalInvestmentService as any
   );
 
+  const activeInvestments = useMemo(
+    () => investments.filter((i) => i.status === "active"),
+    [investments]
+  );
+
   const addInvestment = useCallback(
-    async (investmentData: Omit<PersonalInvestment, "id">) => {
+    async (
+      investmentData: Omit<
+        PersonalInvestment,
+        "id" | "earnings" | "totalEarned"
+      >
+    ) => {
       try {
-        const earnings = investmentData.amount * 0.24;
+        const earnings = calculatePersonalEarnings(investmentData.amount);
         const newInvestment = {
           ...investmentData,
           earnings,
@@ -172,12 +205,24 @@ export const useFirebasePersonalInvestments = () => {
   const updateInvestment = useCallback(
     async (id: string, updates: Partial<PersonalInvestment>) => {
       try {
-        await update(id, updates as Partial<PersonalInvestment>);
+        if (updates.amount !== undefined) {
+          const current = investments.find((inv) => inv.id === id);
+          if (current) {
+            const updatedData = { ...current, ...updates };
+            updatedData.earnings = calculatePersonalEarnings(
+              updatedData.amount
+            );
+            updatedData.totalEarned = updatedData.earnings;
+            await update(id, updatedData);
+          }
+        } else {
+          await update(id, updates as Partial<PersonalInvestment>);
+        }
       } catch (err) {
         throw err;
       }
     },
-    [update]
+    [update, investments]
   );
 
   const deleteInvestment = useCallback(
@@ -185,23 +230,18 @@ export const useFirebasePersonalInvestments = () => {
     [remove]
   );
 
-  const getActiveInvestments = useCallback(
-    () => investments.filter((i) => i.status === "active"),
-    [investments]
-  );
-
   return {
     investments,
+    activeInvestments,
     loading,
     error,
     addInvestment,
     updateInvestment,
     deleteInvestment,
-    getActiveInvestments,
   };
 };
 
-// Hook para personas contactadas
+// ==================== HOOK OPTIMIZADO PARA LEADS ====================
 export const useFirebaseLeads = () => {
   const {
     items: leads,
@@ -212,24 +252,36 @@ export const useFirebaseLeads = () => {
     remove,
   } = useFirestoreCollection<Lead>(LeadService as any);
 
+  const leadsByStatus = useMemo(() => {
+    const map = new Map<string, Lead[]>();
+    leads.forEach((lead) => {
+      const existing = map.get(lead.status) || [];
+      map.set(lead.status, [...existing, lead]);
+    });
+    return map;
+  }, [leads]);
+
   const addLead = useCallback(
     async (leadData: Omit<Lead, "id">) => create(leadData),
     [create]
   );
+
   const updateLead = useCallback(
     async (id: string, updates: Partial<Lead>) => update(id, updates),
     [update]
   );
+
   const deleteLead = useCallback(async (id: string) => remove(id), [remove]);
 
   const getLeadsByStatus = useCallback(
     (status: "interested" | "doubtful" | "rejected") =>
-      leads.filter((l) => l.status === status),
-    [leads]
+      leadsByStatus.get(status) || [],
+    [leadsByStatus]
   );
 
   return {
     leads,
+    leadsByStatus,
     loading,
     error,
     addLead,
@@ -239,6 +291,7 @@ export const useFirebaseLeads = () => {
   };
 };
 
+// ==================== HOOK OPTIMIZADO PARA MÉTRICAS DEL DASHBOARD ====================
 export const useFirebaseDashboardMetrics = () => {
   const { referrals, loading: referralsLoading } = useFirebaseReferrals();
   const { investments, loading: investmentsLoading } =
@@ -252,7 +305,7 @@ export const useFirebaseDashboardMetrics = () => {
 
   const loading = referralsLoading || investmentsLoading || leadsLoading;
 
-  // useMemo PARA CALCULAR MÉTRICAS SOLO CUANDO LOS DATOS CAMBIEN
+  // Memoizar métricas para evitar recálculos innecesarios
   const metrics = useMemo(() => {
     if (loading) {
       return {
@@ -265,6 +318,16 @@ export const useFirebaseDashboardMetrics = () => {
         fifthGeneration: 0,
         sixthGeneration: 0,
         seventhGeneration: 0,
+        eighthGeneration: 0,
+        ninthGeneration: 0,
+        tenthGeneration: 0,
+        eleventhGeneration: 0,
+        twelfthGeneration: 0,
+        thirteenthGeneration: 0,
+        fourteenthGeneration: 0,
+        fifteenthGeneration: 0,
+        sixteenthGeneration: 0,
+        seventeenthGeneration: 0,
         totalEarnings: 0,
         monthlyEarnings: 0,
         expiringToday: 0,
@@ -283,7 +346,7 @@ export const useFirebaseDashboardMetrics = () => {
     );
   }, [referrals, investments, leads, loading, isClient]);
 
-  // useMemo PARA TOP REFERRALS Y EXPIRING TODAY
+  // Memoizar top referrals y expiring today
   const topReferrals = useMemo(() => {
     return loading ? [] : getTopReferrals(referrals, 3);
   }, [referrals, loading]);
@@ -302,6 +365,6 @@ export const useFirebaseDashboardMetrics = () => {
   };
 };
 
-// Hook principal que exporta todo (para compatibilidad)
+// ==================== EXPORTACIONES PARA COMPATIBILIDAD ====================
 export const useDashboardMetrics = useFirebaseDashboardMetrics;
 export const useReferrals = useFirebaseReferrals;

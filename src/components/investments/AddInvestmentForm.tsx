@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useFirebasePersonalInvestments } from "@/hooks";
+import { useFormErrorHandler } from "@/hooks/useErrorHandler";
+import { validatePersonalInvestment } from "@/lib/validation";
+import { ValidationErrors } from "@/components/ui/ValidationMessage";
 import {
   calculateExpirationDate,
   calculatePersonalEarnings,
@@ -23,6 +26,7 @@ export default function AddInvestmentForm({
   onCancel,
 }: AddInvestmentFormProps) {
   const { addInvestment, updateInvestment } = useFirebasePersonalInvestments();
+  const { error, setError, clearError, handleAsync } = useFormErrorHandler();
   const isEdit = !!investment;
 
   const [formData, setFormData] = useState({
@@ -41,39 +45,43 @@ export default function AddInvestmentForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
 
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      alert("El monto debe ser mayor a 0");
+    const amount = parseFloat(formData.amount);
+    const investmentData = {
+      amount,
+      startDate: formData.startDate,
+      expirationDate: calculateExpirationDate(formData.startDate),
+    };
+
+    const validation = validatePersonalInvestment(investmentData);
+    if (!validation.success) {
+      setError({
+        message: "Por favor corrige los errores en el formulario",
+        code: "VALIDATION_ERROR",
+        details: validation.errors,
+      } as any);
       return;
     }
 
-    try {
-      const amount = parseFloat(formData.amount);
-      const startDate = formData.startDate;
-      const expirationDate = calculateExpirationDate(startDate);
-      const earnings = calculatePersonalEarnings(amount);
-      const totalEarned = earnings;
-
-      const investmentData = {
-        amount,
-        startDate,
-        expirationDate,
+    const result = await handleAsync(async () => {
+      const completeInvestmentData = {
+        ...validation.data,
         status: "active" as const,
-        earnings,
-        totalEarned,
+        earnings: calculatePersonalEarnings(amount),
+        totalEarned: calculatePersonalEarnings(amount),
         cycleCount: investment ? investment.cycleCount : 1,
       };
 
       if (isEdit && investment) {
-        await updateInvestment(investment.id, investmentData);
+        await updateInvestment(investment.id, completeInvestmentData);
       } else {
-        await addInvestment(investmentData);
+        await addInvestment(completeInvestmentData);
       }
+    });
 
+    if (result !== null) {
       onSuccess();
-    } catch (error) {
-      console.error("Error saving investment:", error);
-      alert("Error al guardar la inversión");
     }
   };
 
@@ -89,6 +97,15 @@ export default function AddInvestmentForm({
           </Button>
         </CardHeader>
         <CardContent>
+          {/* Mostrar errores de validación */}
+          {error && (
+            <ValidationErrors
+              errors={error.details || [error.message]}
+              onClose={clearError}
+              className="mb-4"
+            />
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

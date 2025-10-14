@@ -15,7 +15,6 @@ export const BUSINESS_CONSTANTS = {
   ELEVENTH_TO_SEVENTEENTH_COMMISSION: 0.01,
 } as const;
 
-// Función helper para obtener comisión por generación
 export const getCommissionRate = (generation: Generation): number => {
   switch (generation) {
     case 1:
@@ -52,9 +51,9 @@ export const getCommissionRate = (generation: Generation): number => {
 // Mapa ciclo (días) => tasa de ganancias para el referido
 export const CYCLE_OPTIONS: Record<number, number> = {
   1: 0.004,
-  7: 0.04, 
-  14: 0.095, 
-  28: 0.24, 
+  7: 0.04,
+  14: 0.095,
+  28: 0.24,
 };
 
 export const getCycleRateFromDays = (days?: number): number => {
