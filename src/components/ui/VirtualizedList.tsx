@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { cn } from "@/lib/utils";
 
 // ==================== TIPOS DE VIRTUALIZACIÓN ====================
@@ -8,7 +14,7 @@ export interface VirtualizedListProps<T> {
   itemHeight: number | ((index: number) => number);
   containerHeight: number;
   renderItem: (item: T, index: number) => React.ReactNode;
-  overscan?: number; 
+  overscan?: number;
   className?: string;
   onScroll?: (scrollTop: number) => void;
   loadingComponent?: React.ReactNode;
@@ -55,7 +61,8 @@ function useVirtualization(
 
     let currentTop = 0;
     for (let i = 0; i < items.length; i++) {
-      const height = typeof itemHeight === 'function' ? itemHeight(i) : itemHeight;
+      const height =
+        typeof itemHeight === "function" ? itemHeight(i) : itemHeight;
       const itemBottom = currentTop + height;
 
       if (itemBottom < scrollTop) {
@@ -77,7 +84,7 @@ function useVirtualization(
 
   // Calcular altura total
   const totalHeight = useMemo(() => {
-    if (typeof itemHeight === 'function') {
+    if (typeof itemHeight === "function") {
       let total = 0;
       for (let i = 0; i < items.length; i++) {
         total += itemHeight(i);
@@ -89,7 +96,7 @@ function useVirtualization(
 
   // Calcular offset superior
   const offsetTop = useMemo(() => {
-    if (typeof itemHeight === 'function') {
+    if (typeof itemHeight === "function") {
       let offset = 0;
       for (let i = 0; i < visibleRange.start; i++) {
         offset += itemHeight(i);
@@ -141,38 +148,56 @@ export function VirtualizedList<T>({
   const [isNearBottom, setIsNearBottom] = useState(false);
 
   // Detectar cuando estamos cerca del final para lazy loading
+  const checkNearBottom = useCallback(() => {
+    const element = scrollElementRef.current;
+    if (!element) return;
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    const threshold = 100;
+    const nearBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+
+    setIsNearBottom(nearBottom);
+
+    if (nearBottom && !isLoading && hasMore) {
+      loadMore?.();
+    }
+  }, [isLoading, hasMore, loadMore, scrollElementRef]);
+
+  // Detectar cuando estamos cerca del final para lazy loading
   useEffect(() => {
     if (!enableLazyLoading || !loadMore || !hasMore) return;
 
     const element = scrollElementRef.current;
     if (!element) return;
 
-    const checkNearBottom = () => {
-      const { scrollTop, scrollHeight, clientHeight } = element;
-      const threshold = 100; 
-      const nearBottom = scrollTop + clientHeight >= scrollHeight - threshold;
-      
-      setIsNearBottom(nearBottom);
-      
-      if (nearBottom && !isLoading && hasMore) {
-        loadMore();
-      }
-    };
-
-    element.addEventListener('scroll', checkNearBottom);
-    return () => element.removeEventListener('scroll', checkNearBottom);
-  }, [enableLazyLoading, loadMore, hasMore, isLoading]);
+    element.addEventListener("scroll", checkNearBottom);
+    return () => element.removeEventListener("scroll", checkNearBottom);
+  }, [
+    enableLazyLoading,
+    loadMore,
+    hasMore,
+    isLoading,
+    checkNearBottom,
+    scrollElementRef,
+  ]);
 
   // Manejar scroll personalizado
-  const handleScrollWithCallback = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    handleScroll(e);
-    onScroll?.(e.currentTarget.scrollTop);
-  }, [handleScroll, onScroll]);
+  const handleScrollWithCallback = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      handleScroll(e);
+      onScroll?.(e.currentTarget.scrollTop);
+    },
+    [handleScroll, onScroll]
+  );
 
   if (items.length === 0) {
     return (
-      <div className={cn("flex items-center justify-center", className)} style={{ height: containerHeight }}>
-        {emptyComponent || <div className="text-gray-500">No hay elementos para mostrar</div>}
+      <div
+        className={cn("flex items-center justify-center", className)}
+        style={{ height: containerHeight }}
+      >
+        {emptyComponent || (
+          <div className="text-gray-500">No hay elementos para mostrar</div>
+        )}
       </div>
     );
   }
@@ -184,28 +209,35 @@ export function VirtualizedList<T>({
       style={{ height: containerHeight }}
       onScroll={handleScrollWithCallback}
     >
-      <div style={{ height: totalHeight, position: 'relative' }}>
+      <div style={{ height: totalHeight, position: "relative" }}>
         <div style={{ transform: `translateY(${offsetTop}px)` }}>
-          {items.slice(visibleRange.start, visibleRange.end + 1).map((item, index) => {
-            const actualIndex = visibleRange.start + index;
-            return (
-              <div
-                key={actualIndex}
-                style={{
-                  height: typeof itemHeight === 'function' ? itemHeight(actualIndex) : itemHeight,
-                }}
-              >
-                {renderItem(item, actualIndex)}
-              </div>
-            );
-          })}
+          {items
+            .slice(visibleRange.start, visibleRange.end + 1)
+            .map((item, index) => {
+              const actualIndex = visibleRange.start + index;
+              return (
+                <div
+                  key={actualIndex}
+                  style={{
+                    height:
+                      typeof itemHeight === "function"
+                        ? itemHeight(actualIndex)
+                        : itemHeight,
+                  }}
+                >
+                  {renderItem(item, actualIndex)}
+                </div>
+              );
+            })}
         </div>
       </div>
 
       {/* Indicador de carga para lazy loading */}
       {enableLazyLoading && isLoading && (
         <div className="flex justify-center py-4">
-          {loadingComponent || <div className="text-gray-500">Cargando más elementos...</div>}
+          {loadingComponent || (
+            <div className="text-gray-500">Cargando más elementos...</div>
+          )}
         </div>
       )}
     </div>
@@ -241,14 +273,24 @@ export function VirtualizedTable<T>({
 
   if (items.length === 0) {
     return (
-      <div className={cn("flex items-center justify-center", className)} style={{ height: containerHeight }}>
-        {emptyComponent || <div className="text-gray-500">No hay datos para mostrar</div>}
+      <div
+        className={cn("flex items-center justify-center", className)}
+        style={{ height: containerHeight }}
+      >
+        {emptyComponent || (
+          <div className="text-gray-500">No hay datos para mostrar</div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className={cn("border border-gray-200 rounded-lg overflow-hidden", className)}>
+    <div
+      className={cn(
+        "border border-gray-200 rounded-lg overflow-hidden",
+        className
+      )}
+    >
       {/* Header */}
       {stickyHeader && (
         <div
@@ -274,28 +316,30 @@ export function VirtualizedTable<T>({
         style={{ height: containerHeight - (stickyHeader ? headerHeight : 0) }}
         onScroll={handleScroll}
       >
-        <div style={{ height: totalHeight, position: 'relative' }}>
+        <div style={{ height: totalHeight, position: "relative" }}>
           <div style={{ transform: `translateY(${offsetTop}px)` }}>
-            {items.slice(visibleRange.start, visibleRange.end + 1).map((item, index) => {
-              const actualIndex = visibleRange.start + index;
-              return (
-                <div
-                  key={actualIndex}
-                  className="border-b border-gray-100 hover:bg-gray-50 flex"
-                  style={{ height: rowHeight }}
-                >
-                  {columns.map((column, colIndex) => (
-                    <div
-                      key={column.key}
-                      className="px-4 py-2 border-r border-gray-100 last:border-r-0 flex items-center"
-                      style={{ width: column.width || 150 }}
-                    >
-                      {column.render(item, actualIndex)}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+            {items
+              .slice(visibleRange.start, visibleRange.end + 1)
+              .map((item, index) => {
+                const actualIndex = visibleRange.start + index;
+                return (
+                  <div
+                    key={actualIndex}
+                    className="border-b border-gray-100 hover:bg-gray-50 flex"
+                    style={{ height: rowHeight }}
+                  >
+                    {columns.map((column, colIndex) => (
+                      <div
+                        key={column.key}
+                        className="px-4 py-2 border-r border-gray-100 last:border-r-0 flex items-center"
+                        style={{ width: column.width || 150 }}
+                      >
+                        {column.render(item, actualIndex)}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>
@@ -315,7 +359,7 @@ export function useInfiniteScroll<T>(
   } = {}
 ) {
   const { pageSize = 20, threshold = 100, enabled = true } = options;
-  
+
   const [items, setItems] = useState<T[]>(initialItems);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -330,15 +374,17 @@ export function useInfiniteScroll<T>(
 
     try {
       const newItems = await loadMore(currentPage);
-      
+
       if (newItems.length === 0) {
         setHasMore(false);
       } else {
-        setItems(prev => [...prev, ...newItems]);
-        setCurrentPage(prev => prev + 1);
+        setItems((prev) => [...prev, ...newItems]);
+        setCurrentPage((prev) => prev + 1);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar más elementos");
+      setError(
+        err instanceof Error ? err.message : "Error al cargar más elementos"
+      );
     } finally {
       setIsLoading(false);
     }

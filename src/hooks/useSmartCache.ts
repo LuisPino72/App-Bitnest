@@ -304,9 +304,9 @@ export function useMultiKeyCache<T>(
 ): Record<string, SmartCacheResult<T>> {
   const results: Record<string, SmartCacheResult<T>> = {};
 
-  keys.forEach((key) => {
+  for (const key of keys) {
     results[key] = useSmartCache(key, () => fetcher(key), options);
-  });
+  }
 
   return results;
 }

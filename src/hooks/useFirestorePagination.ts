@@ -63,9 +63,13 @@ export function useFirestorePagination<T>(
 
   // Estados de paginación
   const [items, setItems] = useState<T[]>([]);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [firstDoc, setFirstDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [documents, setDocuments] = useState<QueryDocumentSnapshot<DocumentData>[]>([]);
+  const [lastDoc, setLastDoc] =
+    useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [firstDoc, setFirstDoc] =
+    useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [documents, setDocuments] = useState<
+    QueryDocumentSnapshot<DocumentData>[]
+  >([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +115,11 @@ export function useFirestorePagination<T>(
       setCurrentPage(1);
 
       // Estimar total de items (aproximado para Firestore)
-      setTotalItems(snapshot.size === itemsPerPage ? (currentPage + 1) * itemsPerPage : snapshot.size);
+      setTotalItems(
+        snapshot.size === itemsPerPage
+          ? (currentPage + 1) * itemsPerPage
+          : snapshot.size
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar datos");
       console.error("Error loading first page:", err);
@@ -128,11 +136,7 @@ export function useFirestorePagination<T>(
     setError(null);
 
     try {
-      const q = query(
-        buildQuery(),
-        startAfter(lastDoc),
-        limit(itemsPerPage)
-      );
+      const q = query(buildQuery(), startAfter(lastDoc), limit(itemsPerPage));
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
@@ -158,7 +162,9 @@ export function useFirestorePagination<T>(
         setTotalItems((prev) => prev + itemsPerPage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar siguiente página");
+      setError(
+        err instanceof Error ? err.message : "Error al cargar siguiente página"
+      );
       console.error("Error loading next page:", err);
     } finally {
       setIsLoading(false);
@@ -174,10 +180,7 @@ export function useFirestorePagination<T>(
 
     try {
       const itemsToSkip = (currentPage - 2) * itemsPerPage;
-      const q = query(
-        buildQuery(),
-        limit(itemsToSkip + itemsPerPage)
-      );
+      const q = query(buildQuery(), limit(itemsToSkip + itemsPerPage));
       const snapshot = await getDocs(q);
 
       const newItems: T[] = [];
@@ -199,7 +202,9 @@ export function useFirestorePagination<T>(
       setFirstDoc(pageDocs[0] || null);
       setCurrentPage((prev) => prev - 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cargar página anterior");
+      setError(
+        err instanceof Error ? err.message : "Error al cargar página anterior"
+      );
       console.error("Error loading previous page:", err);
     } finally {
       setIsLoading(false);
@@ -207,30 +212,33 @@ export function useFirestorePagination<T>(
   }, [buildQuery, itemsPerPage, currentPage, isLoading]);
 
   // Ir a página específica (implementación básica)
-  const goToPage = useCallback((page: number) => {
-    if (page < 1 || page === currentPage || isLoading) return;
+  const goToPage = useCallback(
+    (page: number) => {
+      if (page < 1 || page === currentPage || isLoading) return;
 
-    if (page > currentPage) {
-      // Cargar páginas siguientes hasta llegar a la página deseada
-      const pagesToLoad = page - currentPage;
-      let loadCount = 0;
+      if (page > currentPage) {
+        // Cargar páginas siguientes hasta llegar a la página deseada
+        const pagesToLoad = page - currentPage;
+        let loadCount = 0;
 
-      const loadNext = async () => {
-        if (loadCount < pagesToLoad) {
-          await loadNextPage();
-          loadCount++;
+        const loadNext = async () => {
           if (loadCount < pagesToLoad) {
-            setTimeout(loadNext, 100);
+            await loadNextPage();
+            loadCount++;
+            if (loadCount < pagesToLoad) {
+              setTimeout(loadNext, 100);
+            }
           }
-        }
-      };
+        };
 
-      loadNext();
-    } else {
-      // Para páginas anteriores, recargar desde el inicio
-      loadFirstPage();
-    }
-  }, [currentPage, isLoading, loadNextPage, loadFirstPage]);
+        loadNext();
+      } else {
+        // Para páginas anteriores, recargar desde el inicio
+        loadFirstPage();
+      }
+    },
+    [currentPage, isLoading, loadNextPage, loadFirstPage]
+  );
 
   // Refrescar datos
   const refresh = useCallback(() => {
@@ -246,14 +254,20 @@ export function useFirestorePagination<T>(
     setDocuments([]);
     setItems([]);
     setTotalItems(0);
-    
+
     // Los filtros se actualizarán en el próximo useEffect
   }, []);
 
   // Cargar datos iniciales
   useEffect(() => {
     loadFirstPage();
-  }, [collectionName, itemsPerPage, orderByField, orderDirection]);
+  }, [
+    collectionName,
+    itemsPerPage,
+    orderByField,
+    orderDirection,
+    loadFirstPage,
+  ]);
 
   // Recargar cuando cambien los filtros
   useEffect(() => {
@@ -337,9 +351,10 @@ export function useReferralsPagination(
     if (!searchTerm) return pagination.items;
 
     const term = searchTerm.toLowerCase();
-    return pagination.items.filter((item: any) =>
-      item.name?.toLowerCase().includes(term) ||
-      item.wallet?.toLowerCase().includes(term)
+    return pagination.items.filter(
+      (item: any) =>
+        item.name?.toLowerCase().includes(term) ||
+        item.wallet?.toLowerCase().includes(term)
     );
   }, [pagination.items, searchTerm]);
 
@@ -416,10 +431,11 @@ export function useLeadsPagination(
     if (!searchTerm) return pagination.items;
 
     const term = searchTerm.toLowerCase();
-    return pagination.items.filter((item: any) =>
-      item.name?.toLowerCase().includes(term) ||
-      item.phone?.toLowerCase().includes(term) ||
-      item.notes?.toLowerCase().includes(term)
+    return pagination.items.filter(
+      (item: any) =>
+        item.name?.toLowerCase().includes(term) ||
+        item.phone?.toLowerCase().includes(term) ||
+        item.notes?.toLowerCase().includes(term)
     );
   }, [pagination.items, searchTerm]);
 

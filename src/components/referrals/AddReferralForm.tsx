@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,22 +112,21 @@ export function AddReferralForm({
     }
   }, [referral]);
 
-  const updateCalculations = (
-    amount: number,
-    generation: Generation,
-    cycleDaysOverride?: number
-  ) => {
-    const cycleDaysNum =
-      cycleDaysOverride ??
-      (parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS);
-    const referralEarnings = calculateReferralEarnings(amount, cycleDaysNum);
-    const myIncome = calculateUserIncome(referralEarnings, generation);
-    setCalculations({
-      referralEarnings,
-      myIncome,
-      totalEarned: referralEarnings + myIncome,
-    });
-  };
+  const updateCalculations = useCallback(
+    (amount: number, generation: Generation, cycleDaysOverride?: number) => {
+      const cycleDaysNum =
+        cycleDaysOverride ??
+        (parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS);
+      const referralEarnings = calculateReferralEarnings(amount, cycleDaysNum);
+      const myIncome = calculateUserIncome(referralEarnings, generation);
+      setCalculations({
+        referralEarnings,
+        myIncome,
+        totalEarned: referralEarnings + myIncome,
+      });
+    },
+    [formData.cycle]
+  );
 
   const handleAmountChange = (amount: string) => {
     if (amount === "") {
