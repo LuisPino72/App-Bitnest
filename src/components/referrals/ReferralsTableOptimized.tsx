@@ -264,7 +264,7 @@ export const ReferralsTableOptimized = React.memo<ReferralsTableOptimizedProps>(
                         className="px-3 py-3 whitespace-nowrap"
                         style={{ width: column.width }}
                       >
-                        {column.render(referral, index)}
+                        {column.render(referral)}
                       </td>
                     ))}
                   </tr>
