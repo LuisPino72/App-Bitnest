@@ -233,7 +233,7 @@ export const trackLeadCreated = (status: string) => {
 };
 
 /**
- * Registrar actualización de lead
+ * Registrar actualización de contactos
  */
 export const trackLeadUpdated = (
   leadId: string,
@@ -412,7 +412,6 @@ export const usePerformanceTracking = (componentName: string) => {
  */
 export const useErrorTracking = (componentName: string) => {
   const trackComponentError = (error: Error, context?: Record<string, any>) => {
-    // Llamar a la función exportada `trackError` para enviar el evento a analytics
     trackError("component_error", error.message, {
       componentName,
       stack: error.stack,

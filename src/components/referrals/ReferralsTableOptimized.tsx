@@ -65,7 +65,7 @@ export const ReferralsTableOptimized = React.memo<ReferralsTableOptimizedProps>(
     // Manejar cambio de página
     const handlePageChange = useCallback((page: number) => {
       setCurrentPage(page);
-      // Scroll to top cuando cambie de página
+      // Scroll top cuando cambie de página
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, []);
 

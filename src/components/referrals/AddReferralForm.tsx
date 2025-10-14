@@ -103,7 +103,7 @@ export function AddReferralForm({
     [formData.cycle]
   );
 
-  // Iniciar formulario (moved below updateCalculations to avoid used-before-declaration)
+  // Iniciar formulario
   useEffect(() => {
     if (referral) {
       setFormData({
@@ -228,7 +228,8 @@ export function AddReferralForm({
       const completeReferralData = {
         ...sanitizedData,
         startDate: new Date().toISOString().split("T")[0],
-        cycleCount: 1,
+        cycle: parseInt(sanitizedData.cycle || formData.cycle) || 1,
+        cycleCount: isEdit && referral ? referral.cycleCount || 1 : 1,
         earnings: calculations.referralEarnings,
         userIncome: calculations.myIncome,
         totalEarned: calculations.totalEarned,
@@ -361,27 +362,28 @@ export function AddReferralForm({
               <select
                 value={formData.cycle}
                 onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, cycle: e.target.value }));
                   const newCycle =
                     parseInt(e.target.value, 10) ||
                     BUSINESS_CONSTANTS.CYCLE_DAYS;
+                  setFormData((prev) => {
+                    const expiration = prev.investmentDate
+                      ? calculateExpirationDate(prev.investmentDate, newCycle)
+                      : calculateExpirationDate(
+                          new Date().toISOString().split("T")[0],
+                          newCycle
+                        );
+                    return {
+                      ...prev,
+                      cycle: e.target.value,
+                      expirationDate: expiration,
+                    };
+                  });
                   if (formData.amount) {
                     updateCalculations(
                       parseFloat(formData.amount),
                       parseInt(formData.generation) as Generation,
                       newCycle
                     );
-                  }
-                  // actualizar vencimiento
-                  if (formData.investmentDate) {
-                    const expiration = calculateExpirationDate(
-                      formData.investmentDate,
-                      parseInt(e.target.value)
-                    );
-                    setFormData((prev) => ({
-                      ...prev,
-                      expirationDate: expiration,
-                    }));
                   }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
