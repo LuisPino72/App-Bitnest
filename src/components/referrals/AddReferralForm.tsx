@@ -89,9 +89,7 @@ export function AddReferralForm({
 
   const updateCalculations = useCallback(
     (amount: number, generation: Generation, cycleDaysOverride?: number) => {
-      const cycleDaysNum =
-        cycleDaysOverride ??
-        (parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS);
+      const cycleDaysNum = cycleDaysOverride ?? BUSINESS_CONSTANTS.CYCLE_DAYS;
       const referralEarnings = calculateReferralEarnings(amount, cycleDaysNum);
       const myIncome = calculateUserIncome(referralEarnings, generation);
       setCalculations({
@@ -100,24 +98,34 @@ export function AddReferralForm({
         totalEarned: referralEarnings + myIncome,
       });
     },
-    [formData.cycle]
+    []
   );
-
+  useEffect(() => {}, [formData.cycle, calculations]);
   // Iniciar formulario
   useEffect(() => {
     if (referral) {
-      setFormData({
-        name: referral.name,
-        wallet: referral.wallet,
-        amount: referral.amount?.toString() || "",
-        cycle: (referral.cycle || referral.cycleCount || 1).toString(),
-        generation: referral.generation.toString(),
-        investmentDate: referral.investmentDate,
-        expirationDate: referral.expirationDate,
+      // sobrescribir cambios del usuario durante la edición.
+      setFormData((prev) => {
+        if (prev.name) {
+          return prev;
+        }
+        const initial = {
+          name: referral.name,
+          wallet: referral.wallet,
+          amount: referral.amount?.toString() || "",
+          cycle: (referral.cycle || referral.cycleCount || 1).toString(),
+          generation: referral.generation.toString(),
+          investmentDate: referral.investmentDate,
+          expirationDate: referral.expirationDate,
+        };
+        const initCycle =
+          referral.cycle ||
+          referral.cycleCount ||
+          BUSINESS_CONSTANTS.CYCLE_DAYS;
+        // Disparar cálculo inicial
+        updateCalculations(referral.amount, referral.generation, initCycle);
+        return initial;
       });
-      const initCycle =
-        referral.cycle || referral.cycleCount || BUSINESS_CONSTANTS.CYCLE_DAYS;
-      updateCalculations(referral.amount, referral.generation, initCycle);
     } else {
       const today = new Date().toISOString().split("T")[0];
       setFormData((prev) => ({
@@ -126,7 +134,7 @@ export function AddReferralForm({
         expirationDate: calculateExpirationDate(today),
       }));
     }
-  }, [referral, updateCalculations]);
+  }, [referral]);
 
   const handleAmountChange = (amount: string) => {
     if (amount === "") {
@@ -234,7 +242,6 @@ export function AddReferralForm({
         userIncome: calculations.myIncome,
         totalEarned: calculations.totalEarned,
       };
-
       if (isEdit && referral) {
         await updateReferral(referral.id, completeReferralData);
       } else {
@@ -378,6 +385,7 @@ export function AddReferralForm({
                       expirationDate: expiration,
                     };
                   });
+                  // Si hay monto, recalcular usando el newCycle para evitar leer estado stale
                   if (formData.amount) {
                     updateCalculations(
                       parseFloat(formData.amount),
