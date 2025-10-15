@@ -235,6 +235,7 @@ export function AddReferralForm({
     const result = await handleAsync(async () => {
       const completeReferralData = {
         ...sanitizedData,
+        status: "active",
         startDate: new Date().toISOString().split("T")[0],
         cycle: parseInt(sanitizedData.cycle || formData.cycle) || 1,
         cycleCount: isEdit && referral ? referral.cycleCount || 1 : 1,

@@ -15,7 +15,7 @@ import {
   getActiveReferralPersons,
 } from "@/lib/businessUtils";
 import MetricCard from "@/components/ui/MetricCard";
-import { DashboardMetrics } from "@/types"; // 👈 Importamos el tipo
+import { DashboardMetrics } from "@/types"; 
 
 export default function DashboardPage() {
   const {
@@ -26,7 +26,6 @@ export default function DashboardPage() {
   } = useFirebaseDashboardMetrics();
   const { referrals } = useFirebaseReferrals();
 
-  // ✅ Forzamos el tipo completo para evitar errores de TS
   const metrics = rawMetrics as DashboardMetrics;
   // Lógica de referidos únicos y activos por wallet
   const totalUniqueReferrals = getUniqueReferrals(referrals).length;
@@ -67,7 +66,6 @@ export default function DashboardPage() {
       </div>
 
       {/* Métricas Principales */}
-      {/* Ejemplo de uso: puedes mostrar totalUniqueReferrals y activeReferralPersons en las cards del dashboard */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-8">
         <MetricCard
           title="Inversiones Totales"

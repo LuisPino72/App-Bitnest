@@ -38,7 +38,6 @@ export interface Referral {
   userIncome: number;
   cycleCount: number;
   totalEarned: number;
-  phone?: string;
 }
 
 export interface PersonalInvestment {
@@ -58,7 +57,6 @@ export interface Lead {
   status: LeadStatus;
   contactDate: string;
   notes?: string;
-  phone?: string;
   lastContact?: string;
 }
 
