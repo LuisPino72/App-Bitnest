@@ -13,9 +13,11 @@ import {
   formatCurrency,
   getUniqueReferrals,
   getActiveReferralPersons,
+  getCurrentMonthName,
+  getCurrentMonthAndYear,
 } from "@/lib/businessUtils";
 import MetricCard from "@/components/ui/MetricCard";
-import { DashboardMetrics } from "@/types"; 
+import { DashboardMetrics } from "@/types";
 
 export default function DashboardPage() {
   const {
@@ -88,7 +90,7 @@ export default function DashboardPage() {
           centered
         />
         <MetricCard
-          title="Ganancias Mensuales"
+          title={`Ganancias de ${getCurrentMonthName()}`}
           value={formatCurrency(metrics.monthlyEarnings)}
           icon={<TrendingUp className="h-6 w-6" />}
           changeType="positive"
@@ -293,11 +295,11 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-lg">
           <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Resumen del Mes
+            Resumen de {getCurrentMonthAndYear()}
           </h3>
           <div className="space-y-2">
             <div className="flex justify-between text-base">
-              <span className="text-gray-600">Ingresos Mensuales</span>
+              <span className="text-gray-600">Ingresos del Mes</span>
               <span className="font-bold text-green-600">
                 {formatCurrency(metrics.monthlyEarnings)}
               </span>

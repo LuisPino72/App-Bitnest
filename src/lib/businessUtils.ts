@@ -61,6 +61,47 @@ export const daysBetween = (date1: string, date2: string): number => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
+// ==================== NUEVAS UTILIDADES PARA MES ACTUAL ====================
+
+export const getCurrentMonthRange = (): { start: string; end: string } => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  // Convertir a formato YYYY-MM-DD
+  const formatDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  return {
+    start: formatDate(start),
+    end: formatDate(end),
+  };
+};
+
+export const isDateInCurrentMonth = (dateString: string): boolean => {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  const now = new Date();
+  return (
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+};
+
+export const getCurrentMonthName = (): string => {
+  const now = new Date();
+  return now.toLocaleString("es-ES", { month: "long" });
+};
+
+export const getCurrentMonthAndYear = (): string => {
+  const now = new Date();
+  return now.toLocaleString("es-ES", { month: "long", year: "numeric" });
+};
+
 // ==================== CÁLCULOS DE INVERSIÓN ====================
 export const calculateReferralEarnings = (
   amount: number,
@@ -128,7 +169,7 @@ export const calculateReferralOnlyEarnings = (referrals: Referral[]): number =>
     0
   );
 
-// ==================== DASHBOARD METRICS OPTIMIZADO ====================
+// ==================== DASHBOARD METRICS ====================
 export const calculateDashboardMetrics = (
   referrals: Referral[],
   personalInvestments: PersonalInvestment[],
@@ -136,8 +177,10 @@ export const calculateDashboardMetrics = (
   currentDate?: string
 ): DashboardMetrics => {
   const today = currentDate || getTodayISO();
-  const thirtyDaysAgo = addDays(today, -30);
-  const thirtyDaysAgoDate = new Date(thirtyDaysAgo);
+  const { start: monthStart, end: monthEnd } = getCurrentMonthRange();
+  const monthStartDate = new Date(monthStart);
+  const monthEndDate = new Date(monthEnd);
+
   const activeReferrals = getActiveReferrals(referrals);
   const activeInvestments = getActiveInvestments(personalInvestments);
 
@@ -153,7 +196,7 @@ export const calculateDashboardMetrics = (
     expiringTodayCount: 0,
   };
 
-  // Procesar referridos
+  // Procesar referidos 
   activeReferrals.forEach((r) => {
     initial.totalReferralInvestments += r.amount;
     initial.referralIncome += r.userIncome || 0;
@@ -162,7 +205,8 @@ export const calculateDashboardMetrics = (
     initial.byGeneration[genIndex] = (initial.byGeneration[genIndex] || 0) + 1;
 
     const refDate = new Date(r.startDate || r.investmentDate);
-    if (refDate >= thirtyDaysAgoDate) {
+
+    if (refDate >= monthStartDate && refDate <= monthEndDate) {
       initial.referralMonthlyEarnings += r.userIncome || 0;
     }
 
@@ -173,9 +217,13 @@ export const calculateDashboardMetrics = (
   activeInvestments.forEach((inv) => {
     initial.totalPersonalInvestments += inv.amount;
     initial.personalEarnings += inv.earnings || 0;
+
     const invDate = new Date(inv.startDate);
-    if (invDate >= thirtyDaysAgoDate)
+
+    if (invDate >= monthStartDate && invDate <= monthEndDate) {
       initial.investmentMonthlyEarnings += inv.earnings || 0;
+    }
+
     if (inv.expirationDate === today) initial.expiringTodayCount += 1;
   });
 
@@ -183,6 +231,8 @@ export const calculateDashboardMetrics = (
     initial.totalPersonalInvestments + initial.totalReferralInvestments;
   const totalEarnings =
     initial.referralIncome + initial.personalEarnings + HISTORICAL_EARNINGS;
+
+  //Ganancias del mes actual
   const monthlyEarnings =
     initial.referralMonthlyEarnings + initial.investmentMonthlyEarnings;
 
