@@ -196,7 +196,7 @@ export const calculateDashboardMetrics = (
     expiringTodayCount: 0,
   };
 
-  // Procesar referidos 
+  // Procesar referidos
   activeReferrals.forEach((r) => {
     initial.totalReferralInvestments += r.amount;
     initial.referralIncome += r.userIncome || 0;
@@ -369,13 +369,15 @@ export const calculateGrowthRate = (
       : 0
     : ((current - previous) / previous) * 100;
 
-export const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat("es-ES", {
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat("es-419", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 2,
+    currencyDisplay: "narrowSymbol",
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
+};
 
 export const formatPercentage = (value: number): string =>
   `${(value * 100).toFixed(1)}%`;
