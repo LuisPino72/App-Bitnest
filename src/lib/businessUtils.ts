@@ -184,7 +184,6 @@ export const calculateDashboardMetrics = (
   const activeReferrals = getActiveReferrals(referrals);
   const activeInvestments = getActiveInvestments(personalInvestments);
 
-  // Reducir en una sola pasada para calcular agregados
   const initial = {
     totalPersonalInvestments: 0,
     totalReferralInvestments: 0,
@@ -432,27 +431,34 @@ export const searchItems = <T extends { name: string; phone?: string }>(
 };
 
 export function calculateGenerationMetrics(referrals: Referral[]) {
-  const firstGen = referrals.filter((r) => r.generation === 1);
-  const secondGen = referrals.filter((r) => r.generation === 2);
-  const thirdGen = referrals.filter((r) => r.generation === 3);
-  const fourthGen = referrals.filter((r) => r.generation === 4);
-  const fifthGen = referrals.filter((r) => r.generation === 5);
-  const sixthGen = referrals.filter((r) => r.generation === 6);
-  const seventhGen = referrals.filter((r) => r.generation === 7);
-
-  const calculateMetrics = (genReferrals: Referral[]) => ({
-    count: genReferrals.length,
-    totalInvestment: genReferrals.reduce((sum, r) => sum + r.amount, 0),
-    totalEarned: genReferrals.reduce((sum, r) => sum + (r.totalEarned || 0), 0),
+  const generations = Array.from({ length: 17 }, (_, index) => {
+    const generationNumber = index + 1;
+    const genReferrals = referrals.filter((r) => r.generation === generationNumber);
+    
+    return {
+      count: genReferrals.length,
+      totalInvestment: genReferrals.reduce((sum, r) => sum + r.amount, 0),
+      totalEarned: genReferrals.reduce((sum, r) => sum + (r.totalEarned || 0), 0),
+    };
   });
 
   return {
-    firstGeneration: calculateMetrics(firstGen),
-    secondGeneration: calculateMetrics(secondGen),
-    thirdGeneration: calculateMetrics(thirdGen),
-    fourthGeneration: calculateMetrics(fourthGen),
-    fifthGeneration: calculateMetrics(fifthGen),
-    sixthGeneration: calculateMetrics(sixthGen),
-    seventhGeneration: calculateMetrics(seventhGen),
+    firstGeneration: generations[0],
+    secondGeneration: generations[1],
+    thirdGeneration: generations[2],
+    fourthGeneration: generations[3],
+    fifthGeneration: generations[4],
+    sixthGeneration: generations[5],
+    seventhGeneration: generations[6],
+    eighthGeneration: generations[7],
+    ninthGeneration: generations[8],
+    tenthGeneration: generations[9],
+    eleventhGeneration: generations[10],
+    twelfthGeneration: generations[11],
+    thirteenthGeneration: generations[12],
+    fourteenthGeneration: generations[13],
+    fifteenthGeneration: generations[14],
+    sixteenthGeneration: generations[15],
+    seventeenthGeneration: generations[16],
   };
 }

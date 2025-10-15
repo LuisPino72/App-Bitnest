@@ -2,23 +2,23 @@ import { Generation } from "@/types";
 
 // ==================== CONSTANTES DE COMISIONES ====================
 export const COMMISSION_RATES: Record<Generation, number> = {
-  1: 0.2, 
-  2: 0.1, 
-  3: 0.05, 
-  4: 0.05, 
-  5: 0.05, 
-  6: 0.05, 
-  7: 0.05, 
-  8: 0.03, 
-  9: 0.03, 
-  10: 0.03, 
-  11: 0.01, 
-  12: 0.01, 
-  13: 0.01, 
-  14: 0.01, 
-  15: 0.01, 
-  16: 0.01, 
-  17: 0.01, 
+  1: 0.2,
+  2: 0.1,
+  3: 0.05,
+  4: 0.05,
+  5: 0.05,
+  6: 0.05,
+  7: 0.05,
+  8: 0.03,
+  9: 0.03,
+  10: 0.03,
+  11: 0.01,
+  12: 0.01,
+  13: 0.01,
+  14: 0.01,
+  15: 0.01,
+  16: 0.01,
+  17: 0.01,
 } as const;
 
 // ==================== FUNCIONES DE COMISIONES ====================
@@ -54,9 +54,21 @@ export const calculateUserIncome = (
 export const getGenerationLabel = (generation: Generation): string => {
   if (generation === 1) return "1ra Gen";
   if (generation === 2) return "2da Gen";
-  if (generation >= 3 && generation <= 7) return "3ra-7ma Gen";
-  if (generation >= 8 && generation <= 10) return "8va-10ma Gen";
-  if (generation >= 11 && generation <= 17) return "11va-17va Gen";
+  if (generation === 3) return "3ra Gen";
+  if (generation === 4) return "4ta Gen";
+  if (generation === 5) return "5ta Gen";
+  if (generation === 6) return "6ta Gen";
+  if (generation === 7) return "7ma Gen";
+  if (generation === 8) return "8va Gen";
+  if (generation === 9) return "9na Gen";
+  if (generation === 10) return "10ma Gen";
+  if (generation === 11) return "11ra Gen";
+  if (generation === 12) return "12da Gen";
+  if (generation === 13) return "13ra Gen";
+  if (generation === 14) return "14ta Gen";
+  if (generation === 15) return "15ta Gen";
+  if (generation === 16) return "16ta Gen";
+  if (generation === 17) return "17ma Gen";
   return `${generation}va Gen`;
 };
 

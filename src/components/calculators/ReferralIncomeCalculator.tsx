@@ -98,9 +98,9 @@ export default function ReferralIncomeCalculator() {
               >
                 <option value={1}>Primera Generación (20% comisión)</option>
                 <option value={2}>Segunda Generación (10% comisión)</option>
-                <option value={3}>Tercera a séptima Gen (5% comisión)</option>
-                <option value={8}>Octava a décima Gen (3% comisión)</option>
-                <option value={11}>11va a 17va Gen (1% comisión)</option>
+                <option value={3}>Tercera a séptima Generación (5% comisión)</option>
+                <option value={8}>Octava a décima Generación (3% comisión)</option>
+                <option value={11}>11ra a 17ma Generación (1% comisión)</option>
               </select>
             </div>
 

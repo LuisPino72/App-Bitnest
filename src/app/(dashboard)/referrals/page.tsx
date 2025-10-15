@@ -137,7 +137,6 @@ export default function ReferralsPage() {
     [referrals, confirm, deleteReferral]
   );
 
-  // Loading state optimizado
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in">
@@ -181,8 +180,7 @@ export default function ReferralsPage() {
         referrals={filteredReferrals}
         onEdit={setEditingReferral}
         onDelete={handleDelete}
-        onCycleAction={setCycleModalReferral}
-      />
+        onCycleAction={setCycleModalReferral} loading={false}      />
 
       {/*  Modales */}
       {showForm && (
