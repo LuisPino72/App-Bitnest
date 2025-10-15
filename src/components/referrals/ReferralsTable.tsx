@@ -29,7 +29,7 @@ export const ReferralsTable = React.memo<ReferralsTableProps>(
     loading,
     enablePagination = true,
     enableVirtualization = false,
-    itemsPerPage = 20,
+    itemsPerPage = 10,
     containerHeight = 600,
   }) => {
     const [currentPage, setCurrentPage] = useState(1);
