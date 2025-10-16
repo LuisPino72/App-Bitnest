@@ -231,38 +231,89 @@ export default function DashboardPage() {
             {[
               {
                 key: "firstGeneration",
-                label: "Primera Generación",
+                label: "1ra Generación",
                 value: metrics.firstGeneration,
               },
               {
                 key: "secondGeneration",
-                label: "Segunda Generación",
+                label: "2da Generación",
                 value: metrics.secondGeneration,
               },
               {
                 key: "thirdGeneration",
-                label: "Tercera Generación",
+                label: "3ra Generación",
                 value: metrics.thirdGeneration,
               },
               {
                 key: "fourthGeneration",
-                label: "Cuarta Generación",
+                label: "4ta Generación",
                 value: metrics.fourthGeneration,
               },
               {
                 key: "fifthGeneration",
-                label: "Quinta Generación",
+                label: "5ta Generación",
                 value: metrics.fifthGeneration,
               },
               {
                 key: "sixthGeneration",
-                label: "Sexta Generación",
+                label: "6ta Generación",
                 value: metrics.sixthGeneration,
               },
               {
                 key: "seventhGeneration",
-                label: "Séptima Generación",
+                label: "7ma Generación",
                 value: metrics.seventhGeneration,
+              },
+
+              {
+                key: "eigthGeneration",
+                label: "8va Generación",
+                value: metrics.eighthGeneration,
+              },
+              {
+                key: "ninthGeneration",
+                label: "9na Generación",
+                value: metrics.ninthGeneration,
+              },
+              {
+                key: "tenthGeneration",
+                label: "10ma Generación",
+                value: metrics.tenthGeneration,
+              },
+              {
+                key: "eleventhGeneration",
+                label: "11va Generación",
+                value: metrics.eleventhGeneration,
+              },
+              {
+                key: "twelfthGeneration",
+                label: "12va Generación",
+                value: metrics.twelfthGeneration,
+              },
+              {
+                key: "thirteenthGeneration",
+                label: "13va Generación",
+                value: metrics.thirteenthGeneration,
+              },
+              {
+                key: "fourteenthGeneration",
+                label: "14va Generación",
+                value: metrics.fourteenthGeneration,
+              },
+              {
+                key: "fifteenthGeneration",
+                label: "15va Generación",
+                value: metrics.fifteenthGeneration,
+              },
+              {
+                key: "sixteenthGeneration",
+                label: "16va Generación",
+                value: metrics.sixteenthGeneration,
+              },
+              {
+                key: "seventeenthGeneration",
+                label: "17va Generación",
+                value: metrics.seventeenthGeneration,
               },
             ]
               .filter((item) => item.value > 0)
