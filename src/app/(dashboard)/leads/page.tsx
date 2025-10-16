@@ -183,14 +183,14 @@ export default function LeadsPage() {
         <div className="p-6 border-b border-gray-200">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 bg-gray-100 rounded-lg p-1">
               {tabs.map((tab) => {
                 const leadsCount = getLeadsByStatus(tab.id).length;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-base font-bold transition-colors ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-base font-bold transition-colors whitespace-nowrap ${
                       activeTab === tab.id
                         ? "bg-white text-gray-900 shadow-sm"
                         : "text-gray-600 hover:text-gray-900"
