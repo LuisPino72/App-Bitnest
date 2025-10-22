@@ -160,8 +160,17 @@ export const getActiveReferralPersons = (referrals: Referral[]): Referral[] => {
 export const getTotalInvestments = (referrals: Referral[]): number =>
   referrals.reduce((total, referral) => total + referral.amount, 0);
 
-export const getTotalEarnings = (referrals: Referral[]): number =>
-  referrals.reduce((total, referral) => total + referral.totalEarned, 0);
+export const getTotalEarnings = (
+  referrals: Referral[],
+  personalInvestments: PersonalInvestment[],
+  historicalEarnings = 0
+): number =>
+  referrals.reduce((total, r) => total + (r.totalEarned || 0), 0) +
+  personalInvestments.reduce(
+    (total, inv) => total + (inv.totalEarned || 0),
+    0
+  ) +
+  (historicalEarnings || 0);
 
 export const calculateReferralOnlyEarnings = (referrals: Referral[]): number =>
   getActiveReferrals(referrals).reduce(
@@ -196,15 +205,14 @@ export const calculateDashboardMetrics = (
   };
 
   // Procesar referidos
-  activeReferrals.forEach((r) => {
-    initial.totalReferralInvestments += r.amount;
-    initial.referralIncome += r.userIncome || 0;
+  referrals.forEach((r) => {
+    initial.totalReferralInvestments += r.amount || 0;
+
+    initial.referralIncome += r.totalEarned || r.userIncome || 0;
 
     const genIndex = Math.max(1, Math.min(17, r.generation)) - 1;
     initial.byGeneration[genIndex] = (initial.byGeneration[genIndex] || 0) + 1;
-
     const refDate = new Date(r.startDate || r.investmentDate);
-
     if (refDate >= monthStartDate && refDate <= monthEndDate) {
       initial.referralMonthlyEarnings += r.userIncome || 0;
     }
@@ -213,14 +221,13 @@ export const calculateDashboardMetrics = (
   });
 
   // Procesar inversiones personales
-  activeInvestments.forEach((inv) => {
+  personalInvestments.forEach((inv) => {
     initial.totalPersonalInvestments += inv.amount;
-    initial.personalEarnings += inv.earnings || 0;
+    initial.personalEarnings += inv.totalEarned || inv.earnings || 0;
 
     const invDate = new Date(inv.startDate);
-
     if (invDate >= monthStartDate && invDate <= monthEndDate) {
-      initial.investmentMonthlyEarnings += inv.earnings || 0;
+      initial.investmentMonthlyEarnings += inv.userIncome || inv.earnings || 0;
     }
 
     if (inv.expirationDate === today) initial.expiringTodayCount += 1;
@@ -433,12 +440,17 @@ export const searchItems = <T extends { name: string; phone?: string }>(
 export function calculateGenerationMetrics(referrals: Referral[]) {
   const generations = Array.from({ length: 17 }, (_, index) => {
     const generationNumber = index + 1;
-    const genReferrals = referrals.filter((r) => r.generation === generationNumber);
-    
+    const genReferrals = referrals.filter(
+      (r) => r.generation === generationNumber
+    );
+
     return {
       count: genReferrals.length,
       totalInvestment: genReferrals.reduce((sum, r) => sum + r.amount, 0),
-      totalEarned: genReferrals.reduce((sum, r) => sum + (r.totalEarned || 0), 0),
+      totalEarned: genReferrals.reduce(
+        (sum, r) => sum + (r.totalEarned || 0),
+        0
+      ),
     };
   });
 

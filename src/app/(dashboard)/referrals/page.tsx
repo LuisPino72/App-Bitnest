@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useFirebaseReferrals } from "@/hooks";
 import { getCommissionRate } from "@/lib/commissionUtils";
 import { useConfirmation } from "@/components/ui/ConfirmationModal";
@@ -10,6 +10,7 @@ import { ReferralsFilters } from "@/components/referrals/ReferralsFilters";
 import { ReferralsTable } from "@/components/referrals/ReferralsTable";
 import { AddReferralForm } from "@/components/referrals/AddReferralForm";
 import { CycleActionModal } from "@/components/referrals/CycleActionModal";
+import { ReferralStatus } from "@/types";
 
 export default function ReferralsPage() {
   const { referrals, addReferral, updateReferral, deleteReferral, loading } =
@@ -27,8 +28,34 @@ export default function ReferralsPage() {
   );
   const [cycleActionLoading, setCycleActionLoading] = useState(false);
 
-  // Memoizar filtrado para evitar recálculos innecesarios
+  useEffect(() => {
+    const saved = localStorage.getItem("referralFilters");
+    if (saved) {
+      const { gen, status, search } = JSON.parse(saved);
+      setFilterGeneration(gen);
+      setFilterStatus(status);
+      setSearchTerm(search);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "referralFilters",
+      JSON.stringify({
+        gen: filterGeneration,
+        status: filterStatus,
+        search: searchTerm,
+      })
+    );
+  }, [filterGeneration, filterStatus, searchTerm]);
+
   const filteredReferrals = useMemo(() => {
+    const statusOrder: Record<ReferralStatus, number> = {
+      active: 0,
+      completed: 1,
+      deleted: 2,
+    };
+
     return referrals
       .filter((referral) => {
         const generationMatch =
@@ -39,16 +66,12 @@ export default function ReferralsPage() {
         const searchMatch =
           referral.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           referral.wallet.toLowerCase().includes(searchTerm.toLowerCase());
-
         return generationMatch && statusMatch && searchMatch;
       })
       .sort((a, b) => {
-        // Primero: ordenar por estado (activos primero, luego completados, luego expirados)
-        const statusOrder = { active: 0, completed: 1, expired: 2 };
         const statusDiff = statusOrder[a.status] - statusOrder[b.status];
         if (statusDiff !== 0) return statusDiff;
 
-        // Segundo: ordenar por fecha de vencimiento (más cercanas a vencer primero)
         return (
           new Date(a.expirationDate).getTime() -
           new Date(b.expirationDate).getTime()
@@ -56,7 +79,7 @@ export default function ReferralsPage() {
       });
   }, [referrals, filterGeneration, filterStatus, searchTerm]);
 
-  // Handlers optimizados con useCallback
+  // Handlers optimizados
   const handleFinishCycle = useCallback(
     async (referralId: string) => {
       setCycleActionLoading(true);
@@ -125,7 +148,7 @@ export default function ReferralsPage() {
         "Eliminar Referido",
         `¿Estás seguro de que quieres eliminar a ${referral?.name}? Esta acción no se puede deshacer.`,
         async () => {
-          await deleteReferral(id);
+          await updateReferral(id, { status: "deleted" });
         },
         {
           type: "danger",
@@ -134,7 +157,7 @@ export default function ReferralsPage() {
         }
       );
     },
-    [referrals, confirm, deleteReferral]
+    [referrals, confirm, updateReferral]
   );
 
   if (loading) {
@@ -162,11 +185,8 @@ export default function ReferralsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in py-8 px-2 md:px-8 space-y-6">
-      {/* Componentes modulares */}
       <ReferralsHeader onAddReferral={() => setShowForm(true)} />
-
       <ReferralsStats referrals={referrals} />
-
       <ReferralsFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -180,9 +200,11 @@ export default function ReferralsPage() {
         referrals={filteredReferrals}
         onEdit={setEditingReferral}
         onDelete={handleDelete}
-        onCycleAction={setCycleModalReferral} loading={false}      />
+        onCycleAction={setCycleModalReferral}
+        loading={false}
+      />
 
-      {/*  Modales */}
+      {/* Modales */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -216,7 +238,6 @@ export default function ReferralsPage() {
         />
       )}
 
-      {/* Componente de confirmación*/}
       <ConfirmationComponent />
     </div>
   );
