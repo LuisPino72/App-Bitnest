@@ -13,6 +13,7 @@ import {
   BUSINESS_CONSTANTS,
   getCommissionRate as getLegacyCommissionRate,
   HISTORICAL_EARNINGS,
+  HISTORICAL_TOTAL_INVESTMENT,
   getCycleRateFromDays,
 } from "@/types/constants";
 import {
@@ -190,7 +191,6 @@ export const calculateDashboardMetrics = (
   const monthStartDate = new Date(monthStart);
   const monthEndDate = new Date(monthEnd);
 
-  const activeReferrals = getActiveReferrals(referrals);
   const activeInvestments = getActiveInvestments(personalInvestments);
 
   const initial = {
@@ -204,20 +204,23 @@ export const calculateDashboardMetrics = (
     expiringTodayCount: 0,
   };
 
-  // Procesar referidos
+  // Procesar SOLO referidos únicos
   referrals.forEach((r) => {
     initial.totalReferralInvestments += r.amount || 0;
 
-    initial.referralIncome += r.totalEarned || r.userIncome || 0;
-
-    const genIndex = Math.max(1, Math.min(17, r.generation)) - 1;
-    initial.byGeneration[genIndex] = (initial.byGeneration[genIndex] || 0) + 1;
     const refDate = new Date(r.startDate || r.investmentDate);
     if (refDate >= monthStartDate && refDate <= monthEndDate) {
       initial.referralMonthlyEarnings += r.userIncome || 0;
     }
 
     if (r.expirationDate === today) initial.expiringTodayCount += 1;
+    const genIndex = Math.max(1, Math.min(17, r.generation)) - 1;
+    initial.byGeneration[genIndex] += 1;
+  });
+
+  const uniqueReferrals = getActiveReferralPersons(referrals);
+  uniqueReferrals.forEach((r) => {
+    initial.referralIncome += r.totalEarned || r.userIncome || 0;
   });
 
   // Procesar inversiones personales
@@ -234,7 +237,9 @@ export const calculateDashboardMetrics = (
   });
 
   const totalInvestments =
-    initial.totalPersonalInvestments + initial.totalReferralInvestments;
+    initial.totalPersonalInvestments +
+    initial.totalReferralInvestments -
+    HISTORICAL_TOTAL_INVESTMENT;
   const totalEarnings =
     initial.referralIncome + initial.personalEarnings + HISTORICAL_EARNINGS;
 
