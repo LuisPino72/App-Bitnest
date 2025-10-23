@@ -62,5 +62,5 @@ export const getCycleRateFromDays = (days?: number): number => {
 };
 
 // Valor histórico
-export const HISTORICAL_EARNINGS = 422.65;
+export const HISTORICAL_EARNINGS = 211.3;
 export const HISTORICAL_TOTAL_INVESTMENT = 753.77;
