@@ -164,7 +164,7 @@ export const calculateDashboardMetrics = (
   const initial = {
     totalPersonalInvestments: 0,
     totalReferralInvestments: 0,
-    referralIncome: 0, 
+    referralIncome: 0,
     personalEarnings: 0,
     referralMonthlyEarnings: 0,
     investmentMonthlyEarnings: 0,
@@ -172,9 +172,11 @@ export const calculateDashboardMetrics = (
     expiringTodayCount: 0,
   };
 
-  // Procesar TODOS los referidos
+  // Procesar TODOS los referidos activos
   referrals.forEach((r) => {
-    initial.totalReferralInvestments += r.amount || 0;
+    if (r.status === "active") {
+      initial.totalReferralInvestments += r.amount || 0;
+    }
     initial.referralIncome += r.userIncome || 0;
 
     const refDate = new Date(r.startDate || r.investmentDate);
@@ -183,15 +185,17 @@ export const calculateDashboardMetrics = (
     }
 
     if (r.expirationDate === today && r.status === "active")
-      initial.expiringTodayCount += 1; 
+      initial.expiringTodayCount += 1;
 
     const genIndex = Math.max(1, Math.min(17, r.generation)) - 1;
     initial.byGeneration[genIndex] += 1;
   });
 
-  // Procesar inversiones personales
+  // Procesar SOLO inversiones personales activas
   personalInvestments.forEach((inv) => {
-    initial.totalPersonalInvestments += inv.amount;
+    if (inv.status === "active") {
+      initial.totalPersonalInvestments += inv.amount;
+    }
     initial.personalEarnings += inv.totalEarned || inv.earnings || 0;
 
     const invDate = new Date(inv.startDate);
@@ -199,12 +203,13 @@ export const calculateDashboardMetrics = (
       initial.investmentMonthlyEarnings += inv.userIncome || inv.earnings || 0;
     }
 
-    if (inv.expirationDate === today) initial.expiringTodayCount += 1;
+    if (inv.expirationDate === today && inv.status === "active")
+      initial.expiringTodayCount += 1;
   });
 
   const totalInvestments =
     initial.totalPersonalInvestments +
-    initial.totalReferralInvestments -
+    initial.totalReferralInvestments +
     HISTORICAL_TOTAL_INVESTMENT;
   const totalEarnings =
     initial.referralIncome + initial.personalEarnings + HISTORICAL_EARNINGS;
@@ -310,8 +315,8 @@ export const getTopReferrals = (
   });
 
   // Filtrar solo wallets con al menos un activo
- const activeGroups = activeReferrals.map((r) => r.wallet.toLowerCase());
-const uniqueActiveGroups = Array.from(new Set(activeGroups));
+  const activeGroups = activeReferrals.map((r) => r.wallet.toLowerCase());
+  const uniqueActiveGroups = Array.from(new Set(activeGroups));
   const topGroups = uniqueActiveGroups
     .map((wallet) => grouped[wallet])
     .filter(Boolean)
@@ -325,7 +330,7 @@ const uniqueActiveGroups = Array.from(new Set(activeGroups));
     );
     return {
       ...(activeRef || group.referral),
-      userIncome: group.totalIncome, 
+      userIncome: group.totalIncome,
     };
   });
 };
