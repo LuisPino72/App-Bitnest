@@ -73,25 +73,27 @@ export const ValidationErrors = ({
   onClose,
   className,
 }: ValidationErrorsProps) => {
-  if (errors.length === 0) return null;
+  const safeErrors = Array.isArray(errors) ? errors : [errors].filter(Boolean);
+
+  if (safeErrors.length === 0) return null;
 
   return (
     <div className={cn("space-y-2", className)}>
       <ValidationMessage
-        message={`Se encontraron ${errors.length} error${
-          errors.length > 1 ? "es" : ""
+        message={`Se encontraron ${safeErrors.length} error${
+          safeErrors.length > 1 ? "es" : ""
         }:`}
         type="error"
         onClose={onClose}
       />
       <ul className="ml-4 space-y-1">
-        {errors.map((error, index) => (
+        {safeErrors.map((error, index) => (
           <li
             key={index}
             className="text-sm text-red-600 flex items-start gap-2"
           >
             <span className="text-red-500 mt-1">•</span>
-            {error}
+            {String(error)}
           </li>
         ))}
       </ul>

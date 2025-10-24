@@ -1,10 +1,6 @@
 import React from "react";
 import { Users } from "lucide-react";
 import { Referral } from "@/types";
-import {
-  getActiveReferralPersons,
-  getUniqueReferrals,
-} from "@/lib/businessUtils";
 
 interface ReferralsStatsProps {
   referrals: Referral[];
@@ -12,19 +8,28 @@ interface ReferralsStatsProps {
 
 export const ReferralsStats = React.memo<ReferralsStatsProps>(
   ({ referrals }) => {
-    const activeReferralPersons = React.useMemo(
-      () => getActiveReferralPersons(referrals),
-      [referrals]
-    );
+    const activeReferralPersons = React.useMemo(() => {
+      const activeWallets = new Map<string, Referral>();
+      referrals.forEach((r) => {
+        if (r.status === "active") {
+          const key = r.wallet.toLowerCase();
+          if (!activeWallets.has(key)) {
+            activeWallets.set(key, r);
+          }
+        }
+      });
+      return Array.from(activeWallets.values());
+    }, [referrals]);
 
-    const totalUniqueReferrals = React.useMemo(
-      () => getUniqueReferrals(referrals).length,
-      [referrals]
-    );
-
-    // Contar referidos activos por generación
+    const totalUniqueReferrals = React.useMemo(() => {
+      const uniqueWallets = new Set<string>();
+      referrals.forEach((r) => {
+        uniqueWallets.add(r.wallet.toLowerCase());
+      });
+      return uniqueWallets.size;
+    }, [referrals]);
     const generationStats = React.useMemo(() => {
-      const stats = {
+      const stats: Record<number, number> = {
         1: 0,
         2: 0,
         3: 0,
@@ -45,23 +50,24 @@ export const ReferralsStats = React.memo<ReferralsStatsProps>(
       };
 
       activeReferralPersons.forEach((referral) => {
-        if (stats[referral.generation] !== undefined) {
-          stats[referral.generation]++;
+        const gen = referral.generation;
+        if (gen >= 1 && gen <= 17) {
+          stats[gen] = (stats[gen] || 0) + 1;
         }
       });
 
       return stats;
     }, [activeReferralPersons]);
 
-    const getGenerationIconColor = (generation: string) => {
-      const colorMap: Record<string, string> = {
-        "1": "text-green-500",
-        "2": "text-yellow-500",
-        "3": "text-purple-500",
-        "4": "text-pink-500",
-        "5": "text-indigo-500",
-        "6": "text-orange-500",
-        "7": "text-red-500",
+    const getGenerationIconColor = (generation: number) => {
+      const colorMap: Record<number, string> = {
+        1: "text-green-500",
+        2: "text-yellow-500",
+        3: "text-purple-500",
+        4: "text-pink-500",
+        5: "text-indigo-500",
+        6: "text-orange-500",
+        7: "text-red-500",
       };
       return colorMap[generation] || "text-gray-500";
     };
@@ -86,7 +92,9 @@ export const ReferralsStats = React.memo<ReferralsStatsProps>(
               className="rounded-2xl border bg-white shadow-lg p-6 flex items-center"
             >
               <Users
-                className={`h-8 w-8 ${getGenerationIconColor(generation)}`}
+                className={`h-8 w-8 ${getGenerationIconColor(
+                  Number(generation)
+                )}`}
               />
               <div className="ml-3">
                 <p className="text-base text-gray-600">

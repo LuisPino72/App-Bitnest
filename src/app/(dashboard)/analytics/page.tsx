@@ -34,8 +34,6 @@ import {
   formatCurrency,
   getLeadStats,
   calculateGenerationMetrics,
-  getUniqueReferrals,
-  getActiveReferralPersons,
 } from "@/lib/businessUtils";
 import { InvestmentDistributionChart } from "@/components/analytics/InvestmentDistributionChart";
 import { MonthlyGrowthChart } from "@/components/analytics/MonthlyGrowthChart";
@@ -61,14 +59,7 @@ export default function AnalyticsPage() {
     metricsLoading || referralsLoading || investmentsLoading || leadsLoading;
 
   // ==================== REFERIDOS ÚNICOS Y ACTIVOS ====================
-  const totalUniqueReferrals = useMemo(
-    () => getUniqueReferrals(referrals).length,
-    [referrals]
-  );
-  const activeReferralPersons = useMemo(
-    () => getActiveReferralPersons(referrals).length,
-    [referrals]
-  );
+
   const investmentRanges = useMemo(() => {
     if (loading) return [];
 

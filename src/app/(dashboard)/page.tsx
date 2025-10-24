@@ -11,13 +11,12 @@ import {
 import { useFirebaseDashboardMetrics, useFirebaseReferrals } from "@/hooks";
 import {
   formatCurrency,
-  getUniqueReferrals,
-  getActiveReferralPersons,
   getCurrentMonthName,
   getCurrentMonthAndYear,
 } from "@/lib/businessUtils";
 import MetricCard from "@/components/ui/MetricCard";
 import { DashboardMetrics } from "@/types";
+import { useMemo } from "react";
 
 export default function DashboardPage() {
   const {
@@ -28,11 +27,17 @@ export default function DashboardPage() {
   } = useFirebaseDashboardMetrics();
   const { referrals } = useFirebaseReferrals();
 
-  const metrics = rawMetrics as DashboardMetrics;
-  // Lógica de referidos únicos y activos por wallet
-  const totalUniqueReferrals = getUniqueReferrals(referrals).length;
-  const activeReferralPersons = getActiveReferralPersons(referrals).length;
+  const activeReferralPersons = useMemo(() => {
+    const activeWallets = new Set<string>();
+    referrals.forEach((r) => {
+      if (r.status === "active") {
+        activeWallets.add(r.wallet.toLowerCase());
+      }
+    });
+    return activeWallets.size;
+  }, [referrals]);
 
+  const metrics = rawMetrics as DashboardMetrics;
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in">
@@ -266,7 +271,7 @@ export default function DashboardPage() {
               },
 
               {
-                key: "eigthGeneration",
+                key: "eighthGeneration",
                 label: "8va Generación",
                 value: metrics.eighthGeneration,
               },

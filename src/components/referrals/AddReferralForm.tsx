@@ -49,7 +49,6 @@ export function AddReferralForm({
   const [calculations, setCalculations] = useState({
     referralEarnings: 0,
     myIncome: 0,
-    totalEarned: 0,
   });
   const generationOptions = [
     { value: 1, label: "1ra Generación (20%)" },
@@ -95,7 +94,6 @@ export function AddReferralForm({
       setCalculations({
         referralEarnings,
         myIncome,
-        totalEarned: referralEarnings + myIncome,
       });
     },
     []
@@ -221,10 +219,52 @@ export function AddReferralForm({
 
     const validation = validateReferral(referralData);
     if (!validation.success) {
+      let errorMessages: string[] = [];
+
+      if (validation.errors) {
+        if (
+          typeof validation.errors === "object" &&
+          !Array.isArray(validation.errors)
+        ) {
+          errorMessages = Object.entries(validation.errors)
+            .map(([field, errors]) => {
+              if (Array.isArray(errors)) {
+                return errors.map((error) =>
+                  typeof error === "string"
+                    ? error
+                    : typeof error === "object"
+                    ? `${field}: ${Object.values(error).flat().join(", ")}`
+                    : `${field}: ${String(error)}`
+                );
+              } else if (typeof errors === "string") {
+                return `${field}: ${errors}`;
+              } else if (typeof errors === "object") {
+                return `${field}: ${Object.values(errors ?? {}).flat().join(", ")}`;
+              } else {
+                return `${field}: ${String(errors)}`;
+              }
+            })
+            .flat()
+            .filter(Boolean);
+        } else if (Array.isArray(validation.errors)) {
+          errorMessages = validation.errors.map((error) =>
+            typeof error === "string"
+              ? error
+              : typeof error === "object"
+              ? Object.values(error).flat().join(", ")
+              : String(error)
+          );
+        }
+      }
+
+      if (errorMessages.length === 0) {
+        errorMessages = ["Error de validación en el formulario"];
+      }
+
       setError({
         message: "Por favor corrige los errores en el formulario",
         code: "VALIDATION_ERROR",
-        details: validation.errors,
+        details: errorMessages,
       } as any);
       return;
     }
@@ -241,7 +281,6 @@ export function AddReferralForm({
         cycleCount: isEdit && referral ? referral.cycleCount || 1 : 1,
         earnings: calculations.referralEarnings,
         userIncome: calculations.myIncome,
-        totalEarned: calculations.totalEarned,
       };
       if (isEdit && referral) {
         await updateReferral(referral.id, completeReferralData);
@@ -484,7 +523,7 @@ export function AddReferralForm({
                 <div>
                   <p className="text-gray-600">Total:</p>
                   <p className="font-medium">
-                    {formatCurrency(calculations.totalEarned)}
+                    {formatCurrency(calculations.myIncome)}
                   </p>
                 </div>
               </div>

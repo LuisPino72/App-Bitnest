@@ -135,49 +135,19 @@ export const getActiveInvestments = (
   investments: PersonalInvestment[]
 ): PersonalInvestment[] => investments.filter((inv) => inv.status === "active");
 
-export const getUniqueReferrals = (referrals: Referral[]): Referral[] => {
-  const unique = new Map();
-  referrals.forEach((referral) => {
-    if (!unique.has(referral.wallet)) {
-      unique.set(referral.wallet, referral);
-    }
-  });
-  return Array.from(unique.values());
-};
-
-export const getActiveReferralPersons = (referrals: Referral[]): Referral[] => {
-  const walletGroups = referrals.reduce((acc, ref) => {
-    if (!acc[ref.wallet]) acc[ref.wallet] = [];
-    acc[ref.wallet].push(ref);
-    return acc;
-  }, {} as Record<string, Referral[]>);
-
-  return Object.values(walletGroups)
-    .filter((investments) => investments.some((inv) => inv.status === "active"))
-    .map((investments) => investments[0]);
-};
-
 // ==================== CÁLCULOS DE MÉTRICAS ====================
-export const getTotalInvestments = (referrals: Referral[]): number =>
-  referrals.reduce((total, referral) => total + referral.amount, 0);
 
 export const getTotalEarnings = (
   referrals: Referral[],
   personalInvestments: PersonalInvestment[],
   historicalEarnings = 0
 ): number =>
-  referrals.reduce((total, r) => total + (r.totalEarned || 0), 0) +
+  referrals.reduce((total, r) => total + (r.userIncome || 0), 0) +
   personalInvestments.reduce(
-    (total, inv) => total + (inv.totalEarned || 0),
+    (total, inv) => total + (inv.totalEarned || inv.earnings || 0),
     0
   ) +
   (historicalEarnings || 0);
-
-export const calculateReferralOnlyEarnings = (referrals: Referral[]): number =>
-  getActiveReferrals(referrals).reduce(
-    (sum, referral) => sum + (referral.userIncome || 0),
-    0
-  );
 
 // ==================== DASHBOARD METRICS ====================
 export const calculateDashboardMetrics = (
@@ -191,12 +161,10 @@ export const calculateDashboardMetrics = (
   const monthStartDate = new Date(monthStart);
   const monthEndDate = new Date(monthEnd);
 
-  const activeInvestments = getActiveInvestments(personalInvestments);
-
   const initial = {
     totalPersonalInvestments: 0,
     totalReferralInvestments: 0,
-    referralIncome: 0,
+    referralIncome: 0, 
     personalEarnings: 0,
     referralMonthlyEarnings: 0,
     investmentMonthlyEarnings: 0,
@@ -204,23 +172,21 @@ export const calculateDashboardMetrics = (
     expiringTodayCount: 0,
   };
 
-  // Procesar SOLO referidos únicos
+  // Procesar TODOS los referidos
   referrals.forEach((r) => {
     initial.totalReferralInvestments += r.amount || 0;
+    initial.referralIncome += r.userIncome || 0;
 
     const refDate = new Date(r.startDate || r.investmentDate);
     if (refDate >= monthStartDate && refDate <= monthEndDate) {
       initial.referralMonthlyEarnings += r.userIncome || 0;
     }
 
-    if (r.expirationDate === today) initial.expiringTodayCount += 1;
+    if (r.expirationDate === today && r.status === "active")
+      initial.expiringTodayCount += 1; 
+
     const genIndex = Math.max(1, Math.min(17, r.generation)) - 1;
     initial.byGeneration[genIndex] += 1;
-  });
-
-  const uniqueReferrals = getActiveReferralPersons(referrals);
-  uniqueReferrals.forEach((r) => {
-    initial.referralIncome += r.totalEarned || r.userIncome || 0;
   });
 
   // Procesar inversiones personales
@@ -242,11 +208,8 @@ export const calculateDashboardMetrics = (
     HISTORICAL_TOTAL_INVESTMENT;
   const totalEarnings =
     initial.referralIncome + initial.personalEarnings + HISTORICAL_EARNINGS;
-
-  //Ganancias del mes actual
   const monthlyEarnings =
     initial.referralMonthlyEarnings + initial.investmentMonthlyEarnings;
-
   const totalReferrals = initial.byGeneration.reduce((s, v) => s + v, 0);
 
   return {
@@ -298,7 +261,6 @@ export const calculatePersonalIncomeProjection = (
   };
 };
 
-// Proyecciones
 export const calculateReferralIncomeProjection = (
   input: ReferralCalculatorInput
 ): ReferralCalculatorResult => {
@@ -328,17 +290,45 @@ export const calculateReferralIncomeProjection = (
 };
 
 // ==================== UTILIDADES GENERALES ====================
+
 export const getTopReferrals = (
   referrals: Referral[],
   limit: number = 3
-): Referral[] =>
-  getActiveReferrals(referrals)
-    .sort(
-      (a, b) =>
-        (b.totalEarned || b.userIncome || 0) -
-        (a.totalEarned || a.userIncome || 0)
-    )
+): Referral[] => {
+  const activeReferrals = getActiveReferrals(referrals);
+
+  // Agrupar por wallet
+  const grouped: Record<string, { referral: Referral; totalIncome: number }> =
+    {};
+  referrals.forEach((r) => {
+    // Todos los referidos para suma histórica
+    const key = r.wallet.toLowerCase();
+    if (!grouped[key]) {
+      grouped[key] = { referral: r, totalIncome: 0 };
+    }
+    grouped[key].totalIncome += r.userIncome || 0;
+  });
+
+  // Filtrar solo wallets con al menos un activo
+ const activeGroups = activeReferrals.map((r) => r.wallet.toLowerCase());
+const uniqueActiveGroups = Array.from(new Set(activeGroups));
+  const topGroups = uniqueActiveGroups
+    .map((wallet) => grouped[wallet])
+    .filter(Boolean)
+    .sort((a, b) => b.totalIncome - a.totalIncome)
     .slice(0, limit);
+
+  // Usar el referral activo más reciente como representante
+  return topGroups.map((group) => {
+    const activeRef = activeReferrals.find(
+      (r) => r.wallet.toLowerCase() === group.referral.wallet.toLowerCase()
+    );
+    return {
+      ...(activeRef || group.referral),
+      userIncome: group.totalIncome, 
+    };
+  });
+};
 
 export const getExpiringToday = (
   referrals: Referral[],
@@ -453,7 +443,7 @@ export function calculateGenerationMetrics(referrals: Referral[]) {
       count: genReferrals.length,
       totalInvestment: genReferrals.reduce((sum, r) => sum + r.amount, 0),
       totalEarned: genReferrals.reduce(
-        (sum, r) => sum + (r.totalEarned || 0),
+        (sum, r) => sum + (r.userIncome || 0),
         0
       ),
     };

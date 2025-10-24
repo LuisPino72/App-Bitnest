@@ -10,11 +10,7 @@ import {
   File,
 } from "lucide-react";
 import { useFirebaseReferrals, useFirebasePersonalInvestments } from "@/hooks";
-import {
-  formatCurrency,
-  getUniqueReferrals,
-  getActiveReferralPersons,
-} from "@/lib/businessUtils";
+import { formatCurrency } from "@/lib/businessUtils";
 import { Referral, PersonalInvestment } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,8 +56,20 @@ export default function ExportPage() {
 
   // Calcular métricas usando useMemo para performance
   const metrics = useMemo(() => {
-    const activeReferralPersons = getActiveReferralPersons(referrals);
-    const totalUniqueReferrals = getUniqueReferrals(referrals);
+    const activeWallets = new Set<string>();
+    referrals.forEach((r) => {
+      if (r.status === "active") {
+        activeWallets.add(r.wallet.toLowerCase());
+      }
+    });
+    const activeReferralCount = activeWallets.size;
+
+    const uniqueWallets = new Set<string>();
+    referrals.forEach((r) => {
+      uniqueWallets.add(r.wallet.toLowerCase());
+    });
+    const totalUniqueReferralCount = uniqueWallets.size;
+
     const totalCommission = referrals.reduce(
       (sum, r) => sum + (r.userIncome || 0),
       0
@@ -78,8 +86,8 @@ export default function ExportPage() {
     );
 
     return {
-      activeReferralPersons,
-      totalUniqueReferrals,
+      activeReferralCount,
+      totalUniqueReferralCount,
       activeInvestments,
       totalCommission,
       totalInvested,
@@ -93,7 +101,7 @@ export default function ExportPage() {
       timestamp: new Date().toISOString(),
       summary: {
         totalReferrals: referrals.length,
-        activeReferrals: metrics.activeReferralPersons.length,
+        activeReferrals: metrics.activeReferralCount, 
         totalCommission: metrics.totalCommission,
         totalInvested: metrics.totalInvested,
         totalEarnings: metrics.totalEarnings,

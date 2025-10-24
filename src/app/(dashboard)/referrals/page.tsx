@@ -12,6 +12,15 @@ import { AddReferralForm } from "@/components/referrals/AddReferralForm";
 import { CycleActionModal } from "@/components/referrals/CycleActionModal";
 import { ReferralStatus } from "@/types";
 
+import {
+  calculateReferralEarnings,
+  calculateUserIncome,
+  calculateExpirationDate,
+  getTodayISO,
+  generateId,
+} from "@/lib/businessUtils";
+import { BUSINESS_CONSTANTS } from "@/types/constants";
+
 export default function ReferralsPage() {
   const { referrals, addReferral, updateReferral, deleteReferral, loading } =
     useFirebaseReferrals();
@@ -95,6 +104,16 @@ export default function ReferralsPage() {
     [updateReferral]
   );
 
+  const activeReferralPersons = useMemo(() => {
+    const activeWallets = new Set<string>();
+    referrals.forEach((r) => {
+      if (r.status === "active") {
+        activeWallets.add(r.wallet.toLowerCase());
+      }
+    });
+    return activeWallets.size;
+  }, [referrals]);
+  // Reinversión crea nuevo registro y usa cálculos correctos
   const handleReinvestCycle = useCallback(
     async (referralId: string) => {
       setCycleActionLoading(true);
@@ -102,34 +121,41 @@ export default function ReferralsPage() {
         const referral = referrals.find((r) => r.id === referralId);
         if (!referral) return;
 
-        const newCycle = referral.cycle + 1;
+        // 1. Marcar el referido actual como "completed"
+        await updateReferral(referralId, { status: "completed" });
+
+        // 2. Usar cycleDays para cálculos
+        const cycleDays = referral.cycleDays || BUSINESS_CONSTANTS.CYCLE_DAYS;
         const newAmount = parseFloat(
-          (referral.amount + referral.earnings).toFixed(2)
+          (referral.amount + (referral.earnings || 0)).toFixed(2)
         );
-        const newEarnings = parseFloat((newAmount * 0.24).toFixed(2));
-        const commissionRate = getCommissionRate(referral.generation);
-        const newUserIncome = parseFloat(
-          (newEarnings * commissionRate).toFixed(2)
+        const newEarnings = calculateReferralEarnings(newAmount, cycleDays);
+        const newUserIncome = calculateUserIncome(
+          newEarnings,
+          referral.generation
         );
+        const today = getTodayISO();
+        const newExpirationDate = calculateExpirationDate(today, cycleDays);
 
-        const today = new Date().toISOString().split("T")[0];
-        const expirationDate = new Date(today);
-        expirationDate.setDate(expirationDate.getDate() + 28);
-
-        await updateReferral(referralId, {
+        // 3. Crear NUEVO registro
+        const newReferral = {
+          ...referral,
+          id: generateId("ref"),
           amount: newAmount,
-          cycle: newCycle,
-          investmentDate: today,
-          expirationDate: expirationDate.toISOString().split("T")[0],
           earnings: newEarnings,
           userIncome: newUserIncome,
-          totalEarned: parseFloat(
-            (referral.totalEarned + newEarnings + newUserIncome).toFixed(2)
-          ),
-          status: "active",
+          totalEarned: newUserIncome,
+          investmentDate: today,
           startDate: today,
-          cycleCount: newCycle,
-        });
+          expirationDate: newExpirationDate,
+          status: "active" as const,
+          cycle: (referral.cycle || 1) + 1,
+          cycleCount: referral.cycleCount || 1,
+          cycleDays: cycleDays,
+        };
+
+        // 4. Guardar el nuevo referido
+        await addReferral(newReferral);
 
         setCycleModalReferral(null);
       } catch (error) {
@@ -138,7 +164,7 @@ export default function ReferralsPage() {
         setCycleActionLoading(false);
       }
     },
-    [referrals, updateReferral]
+    [referrals, updateReferral, addReferral]
   );
 
   const handleDelete = useCallback(
