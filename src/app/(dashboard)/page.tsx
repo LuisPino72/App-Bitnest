@@ -137,7 +137,7 @@ export default function DashboardPage() {
                         {referral.name}
                       </p>
                       <p className="text-xs text-gray-600">
-                        Gen {referral.generation} •{" "}
+                        Gen {referral.generation} •{" "} última inversión de{" "}
                         {formatCurrency(referral.amount)}
                       </p>
                     </div>

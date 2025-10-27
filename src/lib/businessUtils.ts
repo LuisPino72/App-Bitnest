@@ -404,6 +404,7 @@ export const getLeadStats = (leads: Lead[]) => {
   return {
     total,
     interested,
+    activeInvestor: leads.filter((l) => l.status === "activeInvestor").length,
     doubtful: leads.filter((l) => l.status === "doubtful").length,
     rejected: leads.filter((l) => l.status === "rejected").length,
     conversionRate,

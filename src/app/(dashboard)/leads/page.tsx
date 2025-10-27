@@ -14,19 +14,28 @@ import {
   Clock,
   Trash2,
   Users,
+  DollarSign,
 } from "lucide-react";
 
 export default function LeadsPage() {
   const { leads, addLead, updateLead, deleteLead, getLeadsByStatus, loading } =
     useFirebaseLeads();
   const [activeTab, setActiveTab] = useState<
-    "interested" | "doubtful" | "rejected"
+    "activeInvestor" | "interested" | "doubtful" | "rejected"
   >("interested");
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Estadísticas
   const stats = [
+    {
+      title: "Inversores Activos",
+      count: getLeadsByStatus("activeInvestor").length,
+      icon: CheckCircle,
+      color: "text-blue-700",
+      bg: "bg-blue-50",
+    },
+
     {
       title: "Interesados",
       count: getLeadsByStatus("interested").length,
@@ -60,6 +69,12 @@ export default function LeadsPage() {
   // Tabs de navegación
   const tabs = [
     {
+      id: "activeInvestor" as const,
+      label: "Inversores Activos",
+      icon: CheckCircle,
+      color: "text-blue-700",
+    },
+    {
       id: "interested" as const,
       label: "Interesados",
       icon: CheckCircle,
@@ -89,6 +104,8 @@ export default function LeadsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "activeInvestor":
+        return "border-l-blue-500 bg-blue-50";
       case "interested":
         return "border-l-green-500 bg-green-50";
       case "doubtful":
@@ -375,6 +392,7 @@ function AddLeadForm({ onSuccess }: { onSuccess: () => void }) {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value="activeInvestor">Inversor Activo</option>
                 <option value="interested">Interesado</option>
                 <option value="doubtful">En Duda</option>
                 <option value="rejected">Rechazado</option>

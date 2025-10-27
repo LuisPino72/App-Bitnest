@@ -79,7 +79,7 @@ export const leadSchema = z.object({
       "El nombre solo puede contener letras y espacios"
     ),
 
-  status: z.enum(["interested", "doubtful", "rejected"], {
+  status: z.enum(["activeInvestor", "interested", "doubtful", "rejected"], {
     errorMap: () => ({ message: "Estado inválido" }),
   }),
 
@@ -222,10 +222,7 @@ export const validateGeneration = (generation: number): boolean => {
  * Sanitiza string eliminando caracteres peligrosos
  */
 export const sanitizeString = (input: string): string => {
-  return input
-    .trim()
-    .replace(/[<>]/g, "") 
-    .replace(/\s+/g, " "); 
+  return input.trim().replace(/[<>]/g, "").replace(/\s+/g, " ");
 };
 
 /**

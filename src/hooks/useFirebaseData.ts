@@ -274,7 +274,7 @@ export const useFirebaseLeads = () => {
   const deleteLead = useCallback(async (id: string) => remove(id), [remove]);
 
   const getLeadsByStatus = useCallback(
-    (status: "interested" | "doubtful" | "rejected") =>
+    (status: "activeInvestor" | "interested" | "doubtful" | "rejected") =>
       leadsByStatus.get(status) || [],
     [leadsByStatus]
   );

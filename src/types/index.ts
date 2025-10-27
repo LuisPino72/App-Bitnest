@@ -1,5 +1,5 @@
 // ==================== TIPOS BASE ====================
-export type LeadStatus = "interested" | "doubtful" | "rejected";
+export type LeadStatus = "activeInvestor" |"interested" | "doubtful" | "rejected";
 export type ReferralStatus = "active" | "completed" | "deleted";
 export type Generation =
   | 1
