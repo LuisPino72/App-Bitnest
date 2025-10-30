@@ -438,7 +438,7 @@ export function AddReferralForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
-                <option value="">Elige el tipo de ciclo</option>
+                <option value="">Elige el ciclo</option>
                 <option value={"1"}>1 día (0.4%)</option>
                 <option value={"7"}>7 días (4%)</option>
                 <option value={"14"}>14 días (9.5%)</option>
