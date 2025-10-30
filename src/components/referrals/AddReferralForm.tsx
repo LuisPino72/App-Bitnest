@@ -40,8 +40,8 @@ export function AddReferralForm({
     name: "",
     wallet: "",
     amount: "",
-    cycle: "1",
-    generation: "1",
+    cycle: "",
+    generation: "",
     investmentDate: "",
     expirationDate: "",
   });
@@ -239,7 +239,9 @@ export function AddReferralForm({
               } else if (typeof errors === "string") {
                 return `${field}: ${errors}`;
               } else if (typeof errors === "object") {
-                return `${field}: ${Object.values(errors ?? {}).flat().join(", ")}`;
+                return `${field}: ${Object.values(errors ?? {})
+                  .flat()
+                  .join(", ")}`;
               } else {
                 return `${field}: ${String(errors)}`;
               }
@@ -425,7 +427,6 @@ export function AddReferralForm({
                       expirationDate: expiration,
                     };
                   });
-                  // Si hay monto, recalcular usando el newCycle para evitar leer estado stale
                   if (formData.amount) {
                     updateCalculations(
                       parseFloat(formData.amount),
@@ -435,7 +436,9 @@ export function AddReferralForm({
                   }
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
               >
+                <option value="">Elige el tipo de ciclo</option>
                 <option value={"1"}>1 día (0.4%)</option>
                 <option value={"7"}>7 días (4%)</option>
                 <option value={"14"}>14 días (9.5%)</option>
@@ -452,7 +455,9 @@ export function AddReferralForm({
                 value={formData.generation}
                 onChange={(e) => handleGenerationChange(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
               >
+                <option value="">Elige una generación</option>
                 {generationOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
