@@ -275,12 +275,26 @@ export function AddReferralForm({
     const sanitizedData = sanitizeReferralData(validation.data);
 
     const result = await handleAsync(async () => {
+      const resolvedStartDate = isEdit
+        ? sanitizedData.investmentDate ||
+          formData.investmentDate ||
+          referral?.investmentDate
+        : sanitizedData.investmentDate ||
+          formData.investmentDate ||
+          new Date().toISOString().split("T")[0];
+
+      const resolvedCycle =
+        parseInt(sanitizedData.cycle || formData.cycle) || 1;
+
       const completeReferralData = {
         ...sanitizedData,
         status: "active",
-        startDate: new Date().toISOString().split("T")[0],
-        cycle: parseInt(sanitizedData.cycle || formData.cycle) || 1,
-        cycleCount: isEdit && referral ? referral.cycleCount || 1 : 1,
+        investmentDate: resolvedStartDate,
+        cycle: resolvedCycle,
+        cycleCount:
+          isEdit && referral
+            ? referral.cycleCount || resolvedCycle
+            : resolvedCycle,
         earnings: calculations.referralEarnings,
         userIncome: calculations.myIncome,
       };

@@ -16,7 +16,10 @@ import {
 } from "@/lib/businessUtils";
 import MetricCard from "@/components/ui/MetricCard";
 import { DashboardMetrics } from "@/types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useFirebasePersonalInvestments } from "@/hooks";
+import { getMonthlyEarningsBreakdown } from "@/lib/businessUtils";
+import MonthlyEarningsModal from "@/components/ui/MonthlyEarningsModal";
 
 export default function DashboardPage() {
   const {
@@ -38,6 +41,11 @@ export default function DashboardPage() {
   }, [referrals]);
 
   const metrics = rawMetrics as DashboardMetrics;
+  const { investments } = useFirebasePersonalInvestments();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [monthlyItems, setMonthlyItems] = useState<
+    Array<{ id: string; name: string; amount: number; date?: string }>
+  >([]);
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 animate-fade-in">
@@ -137,7 +145,7 @@ export default function DashboardPage() {
                         {referral.name}
                       </p>
                       <p className="text-xs text-gray-600">
-                        Gen {referral.generation} •{" "} última inversión de{" "}
+                        Gen {referral.generation} • última inversión de{" "}
                         {formatCurrency(referral.amount)}
                       </p>
                     </div>
@@ -355,14 +363,41 @@ export default function DashboardPage() {
           </h3>
           <div className="space-y-2">
             <div className="flex justify-between text-base">
-              <span className="text-gray-600">Ingresos del Mes</span>
-              <span className="font-bold text-green-600">
+              <button
+                onClick={() => {
+                  const items = getMonthlyEarningsBreakdown(
+                    referrals,
+                    investments
+                  );
+                  setMonthlyItems(items);
+                  setIsModalOpen(true);
+                }}
+                className="text-left"
+              >
+                <span className="text-gray-600">Ingresos del Mes</span>
+              </button>
+              <button
+                onClick={() => {
+                  const items = getMonthlyEarningsBreakdown(
+                    referrals,
+                    investments
+                  );
+                  setMonthlyItems(items);
+                  setIsModalOpen(true);
+                }}
+                className="font-bold text-green-600"
+              >
                 {formatCurrency(metrics.monthlyEarnings)}
-              </span>
+              </button>
             </div>
           </div>
         </div>
       </div>
+      <MonthlyEarningsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        items={monthlyItems}
+      />
     </div>
   );
 }

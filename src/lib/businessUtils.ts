@@ -411,6 +411,56 @@ export const getLeadStats = (leads: Lead[]) => {
   };
 };
 
+// Devuelve el detalle de ingresos que componen las ganancias mensuales
+export const getMonthlyEarningsBreakdown = (
+  referrals: Referral[],
+  personalInvestments: PersonalInvestment[],
+  currentDate?: string
+): Array<{ id: string; name: string; amount: number; date?: string }> => {
+  const today = currentDate || getTodayISO();
+  const { start: monthStart, end: monthEnd } = getCurrentMonthRange();
+  const monthStartDate = new Date(monthStart);
+  const monthEndDate = new Date(monthEnd);
+
+  const items: Array<{
+    id: string;
+    name: string;
+    amount: number;
+    date?: string;
+  }> = [];
+
+  referrals.forEach((r) => {
+    const refDate = new Date(r.startDate || r.investmentDate || "");
+    if (isNaN(refDate.getTime())) return;
+    if (refDate >= monthStartDate && refDate <= monthEndDate) {
+      items.push({
+        id: r.id,
+        name: r.name || r.wallet,
+        amount: r.userIncome || 0,
+        date: r.startDate || r.investmentDate,
+      });
+    }
+  });
+
+  personalInvestments.forEach((inv) => {
+    const invDate = new Date(inv.startDate || "");
+    if (isNaN(invDate.getTime())) return;
+    if (invDate >= monthStartDate && invDate <= monthEndDate) {
+      items.push({
+        id: inv.id,
+        name: "Inversión Personal",
+        amount: inv.userIncome || inv.earnings || 0,
+        date: inv.startDate,
+      });
+    }
+  });
+
+  // Orden descendente por monto
+  items.sort((a, b) => b.amount - a.amount);
+
+  return items;
+};
+
 export const filterReferralsByGeneration = (
   referrals: Referral[],
   generation?: Generation

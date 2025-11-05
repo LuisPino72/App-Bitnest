@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useFirebasePersonalInvestments } from "@/hooks";
 import { useFormErrorHandler } from "@/hooks/useErrorHandler";
 import { validatePersonalInvestment } from "@/lib/validation";
+import { BUSINESS_CONSTANTS } from "@/types/constants";
 import { ValidationErrors } from "@/components/ui/ValidationMessage";
 import {
   calculateExpirationDate,
@@ -32,6 +33,9 @@ export default function AddInvestmentForm({
   const [formData, setFormData] = useState({
     amount: investment?.amount.toString() || "",
     startDate: investment?.startDate || new Date().toISOString().split("T")[0],
+    cycle:
+      investment?.cycleCount?.toString() ||
+      BUSINESS_CONSTANTS.CYCLE_DAYS.toString(),
   });
 
   useEffect(() => {
@@ -39,6 +43,9 @@ export default function AddInvestmentForm({
       setFormData({
         amount: investment.amount.toString(),
         startDate: investment.startDate,
+        cycle:
+          investment.cycleCount?.toString() ||
+          BUSINESS_CONSTANTS.CYCLE_DAYS.toString(),
       });
     }
   }, [investment]);
@@ -48,10 +55,14 @@ export default function AddInvestmentForm({
     clearError();
 
     const amount = parseFloat(formData.amount);
+    const cycleDays =
+      parseInt(formData.cycle, 10) || BUSINESS_CONSTANTS.CYCLE_DAYS;
     const investmentData = {
       amount,
       startDate: formData.startDate,
-      expirationDate: calculateExpirationDate(formData.startDate),
+      expirationDate: calculateExpirationDate(formData.startDate, cycleDays),
+      cycleCount: cycleDays,
+      cycleDays,
     };
 
     const validation = validatePersonalInvestment(investmentData);
@@ -70,7 +81,8 @@ export default function AddInvestmentForm({
         status: "active" as const,
         earnings: calculatePersonalEarnings(amount),
         totalEarned: calculatePersonalEarnings(amount),
-        cycleCount: investment ? investment.cycleCount : 1,
+        cycleCount: investment ? investment.cycleCount : cycleDays,
+        cycleDays: cycleDays,
       };
 
       if (isEdit && investment) {
@@ -141,6 +153,24 @@ export default function AddInvestmentForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Ciclo
+              </label>
+              <select
+                value={formData.cycle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, cycle: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="1">1 día</option>
+                <option value="7">7 días</option>
+                <option value="14">14 días</option>
+                <option value="28">28 días</option>
+              </select>
             </div>
 
             <div className="flex gap-2 pt-4">
