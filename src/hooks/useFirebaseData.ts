@@ -78,8 +78,15 @@ export const useFirebaseReferrals = () => {
           referralData.generation
         );
 
+        // Asegurar consistencia: usar `startDate` (campo usado en queries/orden)
+        const startDate =
+          (referralData as any).startDate ||
+          referralData.investmentDate ||
+          new Date().toISOString().split("T")[0];
+
         const newReferral = {
           ...referralData,
+          startDate,
           cycleDays,
           earnings,
           userIncome,
@@ -112,8 +119,16 @@ export const useFirebaseReferrals = () => {
             const userIncome = calculateUserIncome(earnings, newGeneration);
             const totalEarned = earnings;
 
+            // Si se actualiza investmentDate también sincronizamos startDate
+            const resolvedStartDate =
+              (updates as any).investmentDate ||
+              (updates as any).startDate ||
+              current.startDate ||
+              current.investmentDate;
+
             await update(id, {
               ...updates,
+              startDate: resolvedStartDate,
               cycleDays,
               earnings,
               userIncome,
@@ -123,7 +138,17 @@ export const useFirebaseReferrals = () => {
             await update(id, updates as Partial<Referral>);
           }
         } else {
-          await update(id, updates as Partial<Referral>);
+          // Si sólo se actualiza fechas u otros campos, mantener startDate si es relevante
+          const current = referrals.find((r) => r.id === id);
+          const resolvedStartDate =
+            (updates as any).investmentDate ||
+            (updates as any).startDate ||
+            current?.startDate ||
+            current?.investmentDate;
+          await update(id, {
+            ...updates,
+            ...(resolvedStartDate ? { startDate: resolvedStartDate } : {}),
+          } as Partial<Referral>);
         }
       } catch (err) {
         throw err;
