@@ -16,15 +16,17 @@ import {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  items: Array<{ id: string; name: string; amount: number; date?: string }>;
+  items?: Array<{ id: string; name: string; amount: number; date?: string }>;
 }
 
 export default function MonthlyEarningsModal({
   isOpen,
   onClose,
-  items,
+  items = [],
 }: Props) {
-  const [internalItems, setInternalItems] = useState<Props["items"]>([]);
+  const [internalItems, setInternalItems] = useState<
+    Array<{ id: string; name: string; amount: number; date?: string }>
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [referralCursor, setReferralCursor] = useState<any | null>(null);
   const [investmentCursor, setInvestmentCursor] = useState<any | null>(null);
@@ -121,9 +123,20 @@ export default function MonthlyEarningsModal({
     hasMoreInvestments,
   ]);
 
+  const normalizeIncomingItem = (it: {
+    id: string;
+    name: string;
+    amount: number;
+    date?: string;
+  }) => {
+    if (it.id.startsWith("ref-") || it.id.startsWith("inv-")) return it;
+    const prefix = it.name === "Inversión Personal" ? "inv-" : "ref-";
+    return { ...it, id: `${prefix}${it.id}` };
+  };
+
   useEffect(() => {
     if (items && items.length > 0 && internalItems.length === 0) {
-      setInternalItems(items);
+      setInternalItems(items.map(normalizeIncomingItem));
     }
   }, [items, internalItems.length]);
 
