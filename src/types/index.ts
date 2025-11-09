@@ -1,5 +1,9 @@
 // ==================== TIPOS BASE ====================
-export type LeadStatus = "activeInvestor" |"interested" | "doubtful" | "rejected";
+export type LeadStatus =
+  | "activeInvestor"
+  | "interested"
+  | "doubtful"
+  | "rejected";
 export type ReferralStatus = "active" | "completed" | "deleted";
 export type Generation =
   | 1
@@ -48,8 +52,10 @@ export interface PersonalInvestment {
   status: ReferralStatus;
   earnings: number;
   cycleCount: number;
+  cycleDays?: number;
   totalEarned: number;
   userIncome: number;
+  completedAt?: string;
 }
 
 export interface Lead {
@@ -98,6 +104,7 @@ interface CalculatorBreakdown {
 export interface CalculatorInput {
   amount: number;
   cycles: number;
+  cycleDays?: number;
 }
 
 export interface CalculatorResult {

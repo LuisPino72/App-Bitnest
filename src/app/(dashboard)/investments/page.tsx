@@ -16,8 +16,10 @@ import {
   formatDate,
   calculateExpirationDate,
   calculatePersonalEarnings,
+  getTodayISO,
 } from "@/lib/businessUtils";
 import { PersonalInvestment } from "@/types";
+import { BUSINESS_CONSTANTS } from "@/types/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import AddInvestmentForm from "@/components/investments/AddInvestmentForm";
@@ -85,25 +87,33 @@ export default function InvestmentsPage() {
       const investment = investments.find((inv) => inv.id === investmentId);
       if (!investment) return;
 
+      await updateInvestment(investmentId, { status: "completed" });
+
       const newAmount = parseFloat(
         (investment.amount + investment.earnings).toFixed(2)
       );
-      const newEarnings = parseFloat((newAmount * 0.24).toFixed(2));
-      const newStartDate = investment.expirationDate;
-      const newExpirationDate = calculateExpirationDate(newStartDate);
+      const cycleDays =
+        (investment as any).cycleDays ||
+        investment.cycleCount ||
+        BUSINESS_CONSTANTS.CYCLE_DAYS;
+      const newEarnings = calculatePersonalEarnings(newAmount, cycleDays);
+      const newStartDate = getTodayISO();
+      const newExpirationDate = calculateExpirationDate(
+        newStartDate,
+        cycleDays
+      );
       const totalEarned = parseFloat(
         (investment.totalEarned + newEarnings).toFixed(2)
       );
 
-      await updateInvestment(investmentId, {
+      await addInvestment({
         amount: newAmount,
         startDate: newStartDate,
         expirationDate: newExpirationDate,
-        earnings: newEarnings,
-        totalEarned,
-        cycleCount: investment.cycleCount + 1,
         status: "active",
-      });
+        cycleCount: (investment.cycleCount || 1) + 1,
+        ...({ cycleDays } as any),
+      } as any);
     } catch (error) {
       console.error("Error reinvesting investment:", error);
     } finally {

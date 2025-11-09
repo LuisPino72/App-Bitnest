@@ -119,8 +119,13 @@ export const calculateUserIncome = (
   return calculateUserIncomeNew(referralEarnings, generation);
 };
 
-export const calculatePersonalEarnings = (amount: number): number =>
-  amount * BUSINESS_CONSTANTS.REFERRAL_EARNINGS_RATE;
+export const calculatePersonalEarnings = (
+  amount: number,
+  cycleDays?: number
+): number => {
+  const rate = getCycleRateFromDays(cycleDays);
+  return parseFloat((amount * rate).toFixed(2));
+};
 
 export const calculateExpirationDate = (
   startDate: string,
@@ -198,8 +203,12 @@ export const calculateDashboardMetrics = (
     }
     initial.personalEarnings += inv.totalEarned || inv.earnings || 0;
 
-    const invDate = new Date(inv.startDate);
-    if (invDate >= monthStartDate && invDate <= monthEndDate) {
+    const compDate = new Date(inv.completedAt || "");
+    if (
+      !isNaN(compDate.getTime()) &&
+      compDate >= monthStartDate &&
+      compDate <= monthEndDate
+    ) {
       initial.investmentMonthlyEarnings += inv.userIncome || inv.earnings || 0;
     }
 
@@ -249,8 +258,9 @@ export const calculatePersonalIncomeProjection = (
   input: CalculatorInput
 ): CalculatorResult => {
   let currentAmount = input.amount;
+  const cycleDays = (input as any).cycleDays;
   const breakdown = Array.from({ length: input.cycles }, (_, cycle) => {
-    const earnings = calculatePersonalEarnings(currentAmount);
+    const earnings = calculatePersonalEarnings(currentAmount, cycleDays);
     currentAmount += earnings;
     return { cycle: cycle + 1, earnings, total: currentAmount };
   });

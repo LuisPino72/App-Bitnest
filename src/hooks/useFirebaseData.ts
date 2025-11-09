@@ -8,6 +8,7 @@ import {
   DashboardMetrics,
   Generation,
 } from "@/types";
+import { getTodayISO } from "@/lib/businessUtils";
 import {
   ReferralService,
   PersonalInvestmentService,
@@ -78,7 +79,6 @@ export const useFirebaseReferrals = () => {
           referralData.generation
         );
 
-        // Asegurar consistencia: usar `startDate` (campo usado en queries/orden)
         const startDate =
           (referralData as any).startDate ||
           referralData.investmentDate ||
@@ -119,7 +119,6 @@ export const useFirebaseReferrals = () => {
             const userIncome = calculateUserIncome(earnings, newGeneration);
             const totalEarned = earnings;
 
-            // Si se actualiza investmentDate también sincronizamos startDate
             const resolvedStartDate =
               (updates as any).investmentDate ||
               (updates as any).startDate ||
@@ -138,7 +137,6 @@ export const useFirebaseReferrals = () => {
             await update(id, updates as Partial<Referral>);
           }
         } else {
-          // Si sólo se actualiza fechas u otros campos, mantener startDate si es relevante
           const current = referrals.find((r) => r.id === id);
           const resolvedStartDate =
             (updates as any).investmentDate ||
@@ -213,9 +211,17 @@ export const useFirebasePersonalInvestments = () => {
       >
     ) => {
       try {
-        const earnings = calculatePersonalEarnings(investmentData.amount);
+        const cycleDays =
+          (investmentData as any).cycleDays ??
+          (investmentData as any).cycleCount ??
+          BUSINESS_CONSTANTS.CYCLE_DAYS;
+        const earnings = calculatePersonalEarnings(
+          investmentData.amount,
+          cycleDays
+        );
         const newInvestment = {
           ...investmentData,
+          cycleDays,
           earnings,
           totalEarned: earnings,
         } as Omit<PersonalInvestment, "id">;
@@ -230,14 +236,29 @@ export const useFirebasePersonalInvestments = () => {
   const updateInvestment = useCallback(
     async (id: string, updates: Partial<PersonalInvestment>) => {
       try {
-        if (updates.amount !== undefined) {
+        if (updates.amount !== undefined || updates.status !== undefined) {
           const current = investments.find((inv) => inv.id === id);
           if (current) {
-            const updatedData = { ...current, ...updates };
+            const updatedData = { ...current, ...updates } as any;
+            const cycleDays =
+              (updates as any).cycleDays ??
+              updatedData.cycleDays ??
+              updatedData.cycleCount ??
+              BUSINESS_CONSTANTS.CYCLE_DAYS;
             updatedData.earnings = calculatePersonalEarnings(
-              updatedData.amount
+              updatedData.amount,
+              cycleDays
             );
             updatedData.totalEarned = updatedData.earnings;
+            updatedData.cycleDays = cycleDays;
+
+            if (
+              (updates as any).status === "completed" &&
+              !updatedData.completedAt
+            ) {
+              updatedData.completedAt = getTodayISO();
+            }
+
             await update(id, updatedData);
           }
         } else {

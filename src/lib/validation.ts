@@ -64,6 +64,12 @@ export const personalInvestmentSchema = z.object({
   expirationDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha de expiración inválida"),
+  cycleCount: z.number().int().min(1, "El ciclo mínimo es 1").optional(),
+  cycleDays: z
+    .number()
+    .int()
+    .min(1, "Los días de ciclo deben ser al menos 1")
+    .optional(),
 });
 
 /**
